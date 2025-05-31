@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pymatgen
+mp-api
+jinja2
+plotly
+python-multipart
+cryptography

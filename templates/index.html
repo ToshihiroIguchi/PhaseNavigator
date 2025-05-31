@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Phase Navigator</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin:2rem; color:#222; }
+    header { display:flex; align-items:center; margin-bottom:1rem; }
+    header img { height:48px; margin-right:.75rem; }
+    h1 { font-size:1.7rem; margin:0; }
+    input,label { margin:.3rem 0; }
+    input[type=text],input[type=password],input[type=number] { width:420px; padding:6px; }
+    button { padding:6px 12px; }
+    #plot { width:80vw; height:70vh; margin-top:1rem; }
+    .warn { color:#c00; }
+  </style>
+</head>
+<body>
+<header>
+  <img src="/static/logo.png" alt="logo">
+  <h1>Phase Navigator <small>(solid phases)</small></h1>
+</header>
+
+<form id="pd-form" method="post" action="/diagram">
+  <label>Comma-separated formulas (2–4):</label><br/>
+  <input name="formulas"
+         placeholder="BaO, MgO, SiO2, ZrO2"
+         value="{{ formulas if formulas else '' }}"
+         required />
+
+  <br/><label>Temperature [K] (0 or 300–2000):</label><br/>
+  <input type="number" name="temp" min="0" max="2000" step="1"
+         value="{{ temp if temp is not none else 0 }}" required />
+
+  <br/><label>Energy cutoff for unstable phases [eV/atom] (0 = hide):</label><br/>
+  <input type="number" name="e_cut" min="0" step="0.01"
+         value="{{ e_cut if e_cut is not none else 0.05 }}" required />
+
+  <br/><label>Materials Project API Key:</label><br/>
+  <input id="api-key-input" type="password" name="api_key"
+         placeholder="Enter your API key" autocomplete="off" required />
+
+  <br/>
+  <button type="submit">Generate phase diagram</button>
+  <p class="warn">API key is stored only in this browser (localStorage).</p>
+</form>
+
+<hr/>
+
+{% if formulas %}
+<h2>Result: {{ formulas }} @ {{ temp }} K (E<sub>cut</sub> = {{ e_cut }} eV)</h2>
+<div id="plot">Loading…</div>
+
+<script>
+  const KEY_STORAGE = "mp_api_key_plain";
+  const apiInput = document.getElementById("api-key-input");
+
+  // restore key
+  const storedKey = localStorage.getItem(KEY_STORAGE);
+  if (storedKey) apiInput.value = storedKey;
+
+  // save key on submit
+  document.getElementById("pd-form").addEventListener("submit",
+      () => localStorage.setItem(KEY_STORAGE, apiInput.value));
+
+  if (!apiInput.value) {
+    document.getElementById("plot").textContent =
+      "API key not found. Please go back and enter a valid key.";
+  } else {
+    (async () => {
+      const payload = {
+        f: "{{ formulas }}".split(",").map(s => s.trim()),
+        temp: Number("{{ temp }}"),
+        e_cut: Number("{{ e_cut }}")
+      };
+
+      const res = await fetch("/diagram/raw", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-KEY": apiInput.value
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        document.getElementById("plot").textContent =
+          "Error " + res.status + ": " + res.statusText;
+        return;
+      }
+
+      const fig = await res.json();
+      document.getElementById("plot").innerHTML = "";
+      Plotly.newPlot("plot", fig.data, fig.layout);
+    })();
+  }
+</script>
+{% endif %}
+</body>
+</html>
