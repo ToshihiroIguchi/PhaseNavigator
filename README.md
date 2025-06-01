@@ -1,13 +1,22 @@
-# PhaseNavigator v1.2
+<p align="center">
+  <img src="static/logo.png" alt="Phase Navigator logo" height="120">
+</p>
 
-固相のみの温度依存相図ジェネレーター。  
-- **API キーはブラウザで一度入力 → AES-GCM 暗号化して localStorage に保存 → 以降自動送信**  
-- **サーバー側はキーを保存せず SHA-256 ハッシュのみログ**  
-- **簡易レートリミット** (10 req/30 s per key/IP) 実装  
-- **ロゴ (static/logo.svg)** を全ページ上部に表示  
-- 生成データは CC-BY-4.0 表記付き
+# Phase Navigator
 
-## 起動
+*Interactive phase-diagram generator for up to 4 components (solid phases) using the Materials Project API and **pymatgen**.*
+
+## Key Features
+- ⚡ **Fast**: direct query to Materials Project and on-the-fly Plotly rendering  
+- 🔒 **Per-user API keys**: the key never leaves your browser (localStorage)  
+- 📊 **Custom energy cutoff & temperature** (0 K or 300–2000 K)  
+- 🖼 **Responsive UI**: form on the left, diagram on the right, mobile-friendly  
+
+## Quick start
+
 ```bash
+# 1 — build
 docker build -t phasenavigator .
-docker run -p 8000:8000 phasenavigator
+
+# 2 — run (detached)
+docker run -d 8000:8000 phasenavigator
