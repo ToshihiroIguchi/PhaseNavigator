@@ -4,66 +4,120 @@
   <meta charset="utf-8" />
   <title>Phase Navigator</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+  <!-- ────────── INTERNAL STYLES ───────────────────────────── -->
   <style>
+    :root {
+      /* 統一幅をここで一元管理 */
+      --control-width: 420px;
+    }
+
     body { font-family: Arial, sans-serif; margin:2rem; color:#222; }
+
+    /* ── レイアウト ───────────────────────────────────────── */
+    #main-container {
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-start;
+      gap:2rem;                 /* フォームと図の間隔 */
+    }
+    #controls {
+      flex:0 0 var(--control-width);
+      max-width:var(--control-width);
+    }
+    #output {
+      flex:1 1 600px;           /* 図側は残り幅いっぱい */
+      min-width:400px;
+    }
+
+    /* ── タイポ & フォーム ───────────────────────────────── */
     header { display:flex; align-items:center; margin-bottom:1rem; }
     header img { height:48px; margin-right:.75rem; }
     h1 { font-size:1.7rem; margin:0; }
-    input,label { margin:.3rem 0; }
-    input[type=text],input[type=password],input[type=number] { width:420px; padding:6px; }
-    button { padding:6px 12px; }
-    #plot { width:80vw; height:70vh; margin-top:1rem; }
+
+    input,label { margin:.3rem 0; display:block; }
+    input[type=text],
+    input[type=password],
+    input[type=number] {
+      width:100%;               /* すべて同じ横幅 */
+      padding:6px;
+      box-sizing:border-box;
+    }
+    button { padding:6px 12px; margin-top:.6rem; }
     .warn { color:#c00; }
+
+    /* ── プロット領域 ────────────────────────────────────── */
+    #plot { width:100%; height:70vh; margin-top:1rem; }
+
+    /* ── モバイル（幅768px以下）は縦並び ───────────────── */
+    @media (max-width: 768px) {
+      #controls, #output { flex:1 1 100%; max-width:none; }
+    }
   </style>
+  <!-- ─────────────────────────────────────────────────────── -->
 </head>
 <body>
+
 <header>
   <img src="/static/logo.png" alt="logo">
   <h1>Phase Navigator <small>(solid phases)</small></h1>
 </header>
 
-<form id="pd-form" method="post" action="/diagram">
-  <label>Comma-separated formulas (2–4):</label><br/>
-  <input name="formulas"
-         placeholder="BaO, MgO, SiO2, ZrO2"
-         value="{{ formulas if formulas else '' }}"
-         required />
+<div id="main-container">
 
-  <br/><label>Temperature [K] (0 or 300–2000):</label><br/>
-  <input type="number" name="temp" min="0" max="2000" step="1"
-         value="{{ temp if temp is not none else 0 }}" required />
+  <!-- ────────── 左：入力フォーム ───────────────────── -->
+  <div id="controls">
+    <form id="pd-form" method="post" action="/diagram">
 
-  <br/><label>Energy cutoff for unstable phases [eV/atom] (0 = hide):</label><br/>
-  <input type="number" name="e_cut" min="0" step="0.01"
-         value="{{ e_cut if e_cut is not none else 0.05 }}" required />
+      <label for="formulas">Comma-separated formulas (2–4):</label>
+      <input id="formulas" name="formulas"
+             placeholder="BaO, MgO, SiO2, ZrO2"
+             value="{{ formulas if formulas else '' }}"
+             required />
 
-  <br/><label>Materials Project API Key:</label><br/>
-  <input id="api-key-input" type="password" name="api_key"
-         placeholder="Enter your API key" autocomplete="off" required />
+      <label for="temp">Temperature [K] (0 or 300–2000):</label>
+      <input id="temp" type="number" name="temp" min="0" max="2000" step="1"
+             value="{{ temp if temp is not none else 0 }}" required />
 
-  <br/>
-  <button type="submit">Generate phase diagram</button>
-  <p class="warn">API key is stored only in this browser (localStorage).</p>
-</form>
+      <label for="e_cut">Energy cutoff for unstable phases [eV/atom] (0 = hide):</label>
+      <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
+             value="{{ e_cut if e_cut is not none else 0.2 }}" required />
 
-<hr/>
+      <label for="api-key-input">Materials Project API Key:</label>
+      <input id="api-key-input" type="password" name="api_key"
+             placeholder="Enter your API key" autocomplete="off" required />
+
+      <button type="submit">Generate phase diagram</button>
+      <p class="warn">API key is stored only in this browser (localStorage).</p>
+    </form>
+  </div>
+  <!-- ────────── /controls ─────────────────────────────── -->
+
+  <!-- ────────── 右：結果表示 ──────────────────────────── -->
+  <div id="output">
+    {% if formulas %}
+      <h2>Result: {{ formulas }} at {{ temp }} K (E<sub>cut</sub> = {{ e_cut }} eV)</h2>
+      <div id="plot">Loading…</div>
+    {% endif %}
+  </div>
+  <!-- ────────── /output ──────────────────────────────── -->
+
+</div> <!-- /main-container -->
 
 {% if formulas %}
-<h2>Result: {{ formulas }} @ {{ temp }} K (E<sub>cut</sub> = {{ e_cut }} eV)</h2>
-<div id="plot">Loading…</div>
-
 <script>
   const KEY_STORAGE = "mp_api_key_plain";
   const apiInput = document.getElementById("api-key-input");
 
-  // restore key
+  /* 既存キーの復元 */
   const storedKey = localStorage.getItem(KEY_STORAGE);
   if (storedKey) apiInput.value = storedKey;
 
-  // save key on submit
+  /* 送信時にキーを保存 */
   document.getElementById("pd-form").addEventListener("submit",
       () => localStorage.setItem(KEY_STORAGE, apiInput.value));
 
+  /* API キー未入力時はエラー表示 */
   if (!apiInput.value) {
     document.getElementById("plot").textContent =
       "API key not found. Please go back and enter a valid key.";
@@ -97,5 +151,6 @@
   }
 </script>
 {% endif %}
+
 </body>
 </html>

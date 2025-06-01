@@ -19,4 +19,8 @@
 docker build -t phasenavigator .
 
 # 2 — run (detached)
-docker run -d 8000:8000 phasenavigator
+docker run -p 8000:8000 phasenavigator
+```
+
+## Screenshot
+ <img src="sample.png" alt="Sample">
