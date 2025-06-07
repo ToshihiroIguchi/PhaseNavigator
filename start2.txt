@@ -1,3 +1,8 @@
 
 docker build -t phasenavigator .
 docker run -p 8000:8000 phasenavigator
+
+
+git add .
+git commit -m "del files"
+git push
