@@ -31,7 +31,7 @@ def diagram(
     req: Request,
     formulas: str = Form(...),
     temp: str = Form("0"),  # 文字列として受け取り
-    e_cut: float = Form(...),
+    e_cut: float = Form(0.2),  # デフォルト値を0.2に設定
 ):
     # 温度値の変換処理
     try:
@@ -41,7 +41,7 @@ def diagram(
 
     chems = [c.strip() for c in formulas.split(",") if c.strip()]
     if len(chems) < 2:
-        raise HTTPException(status_code=400, detail="Enter ≥2 formulas")
+        raise HTTPException(status_code=400, detail="Please enter at least 2 chemical formulas separated by commas.")
     return templates.TemplateResponse(
         "index.html",
         {
@@ -66,7 +66,7 @@ def diagram_raw(
     ip: str = Depends(client_ip),
 ):
     if not check_limit((_hash_key(x_api_key), ip)):
-        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        raise HTTPException(status_code=429, detail="Rate limit exceeded. Please wait 30 seconds before making another request.")
     return make_phase_diagram_plotly(
         payload.f, payload.temp, x_api_key, ip, e_cut=payload.e_cut
     )

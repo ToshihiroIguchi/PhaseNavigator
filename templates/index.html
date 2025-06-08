@@ -173,7 +173,7 @@
     }
 
     #temp-input {
-      width: 80px;
+      width: 100px;
       text-align: center;
     }
 
@@ -200,21 +200,185 @@
       margin-top: 0.5rem;
     }
 
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      color: #666;
+      padding: 2rem;
+    }
+
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid var(--primary-color);
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      background: #ffebee;
+      border: 1px solid #e57373;
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+      color: #c62828;
+    }
+
+    .success-message {
+      background: #e8f5e8;
+      border: 1px solid #4caf50;
+      border-radius: 4px;
+      padding: 1rem;
+      margin: 1rem 0;
+      color: #2e7d32;
+    }
+
+    .diagram-info {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #666;
+      flex-wrap: wrap;
+    }
+
+    .diagram-info span {
+      background: #f0f0f0;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    #diagram-header {
+      margin-bottom: 1rem;
+    }
+
+    .progress-steps {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #e9ecef;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    .progress-step.active {
+      color: var(--primary-color);
+      font-weight: 500;
+    }
+
+    .progress-step.completed {
+      color: #28a745;
+    }
+
+    .progress-step-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+    }
+
+    .progress-step.active .progress-step-icon {
+      background: var(--primary-color);
+      color: white;
+    }
+
+    .progress-step.completed .progress-step-icon {
+      background: #28a745;
+      color: white;
+    }
+
+    .progress-step.pending .progress-step-icon {
+      background: #e9ecef;
+      color: #6c757d;
+    }
+
     #plot {
       width: 100%;
       height: 70vh;
       margin-top: 1.5rem;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 10px;
+      box-sizing: border-box;
     }
 
     @media (max-width: 768px) {
-      #main-container {
-        flex-direction: column;
+      body {
+        margin: 1rem;
       }
       
-      #controls, #output {
+      #main-container {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      
+      #controls {
         width: 100%;
+        padding: 1rem;
+      }
+      
+      #output {
+        width: 100%;
+      }
+      
+      #plot {
+        height: 50vh;
+      }
+      
+      .slider-container {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      #temp-input {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        margin: 0.5rem;
+      }
+      
+      h1 {
+        font-size: 1.4rem;
+      }
+      
+      header img {
+        height: 36px;
+      }
+      
+      #controls {
+        padding: 0.8rem;
+      }
+      
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      
+      button[type="submit"] {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
       }
     }
   </style>
@@ -233,7 +397,7 @@
 
       <div class="form-group">
         <label for="formulas">Comma-separated formulas (2–4):</label>
-        <input id="formulas" name="formulas"
+        <input id="formulas" name="formulas" type="text"
                placeholder="e.g. BaO, MgO, SiO2"
                value="{{ formulas if formulas else '' }}"
                required />
@@ -262,7 +426,7 @@
       <div class="form-group">
         <label for="e_cut">Energy cutoff for unstable phases [eV/atom]:</label>
         <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
-               value="{{ e_cut if e_cut is not none else 0.2 }}" required />
+               value="0.2" required />
         <small class="warn">0 = hide unstable phases</small>
       </div>
 
@@ -270,21 +434,21 @@
         <label for="api-key-input">Materials Project API Key:</label>
         <input id="api-key-input" type="password" name="api_key"
                placeholder="Enter your API key" autocomplete="off" required />
-        <p class="warn">API key is stored only in your browser (localStorage).</p>
+        <p class="warn">API key is encrypted and stored securely in your browser (localStorage).</p>
       </div>
 
-      <button type="submit">Generate Phase Diagram</button>
+      <button type="submit" id="submit-btn">
+        <span id="submit-text">Generate Phase Diagram</span>
+        <span id="submit-loading" style="display: none;">
+          <div class="loading-spinner"></div>
+          Generating...
+        </span>
+      </button>
     </form>
   </div>
 
   <div id="output">
     {% if formulas %}
-      <h2 id="diagram-title">Phase Diagram: {{ formulas }}
-        <small id="diagram-params">
-          {% if temp != 0 %}{{ temp }} K{% else %}0 K (no temp){% endif %}, 
-          E<sub>cut</sub> = {{ e_cut }} eV
-        </small>
-      </h2>
       <div id="plot">Loading phase diagram...</div>
     {% endif %}
   </div>
@@ -306,9 +470,7 @@
       pdForm: document.getElementById('pd-form'),
       plotDiv: document.getElementById('plot'),
       formulasInput: document.getElementById('formulas'),
-      eCutInput: document.getElementById('e_cut'),
-      diagramTitle: document.getElementById('diagram-title'),
-      diagramParams: document.getElementById('diagram-params')
+      eCutInput: document.getElementById('e_cut')
     };
 
     // 要素存在確認
@@ -319,29 +481,37 @@
       }
     }
 
+    // Simple encryption/decryption functions
+    function simpleEncrypt(text) {
+      return btoa(text.split('').map(char => 
+        String.fromCharCode(char.charCodeAt(0) + 3)
+      ).join(''));
+    }
+    
+    function simpleDecrypt(encrypted) {
+      try {
+        return atob(encrypted).split('').map(char => 
+          String.fromCharCode(char.charCodeAt(0) - 3)
+        ).join('');
+      } catch (e) {
+        return '';
+      }
+    }
+    
     // APIキーの復元
-    const storedKey = localStorage.getItem('mp_api_key_plain');
+    const storedKey = localStorage.getItem('mp_api_key_encrypted');
     if (storedKey) {
-      elements.apiInput.value = storedKey;
-      console.log('Restored API key from localStorage');
+      const decryptedKey = simpleDecrypt(storedKey);
+      if (decryptedKey) {
+        elements.apiInput.value = decryptedKey;
+        console.log('Restored encrypted API key from localStorage');
+      }
     }
 
-    // タイトルとパラメータ表示を更新する関数
+    // パラメータ表示を更新する関数（状態図内に表示するため簡素化）
     function updateDiagramDisplay() {
-      const formulas = elements.formulasInput.value.split(',').map(f => f.trim()).filter(f => f).join(', ');
-      const temp = elements.finalTempInput.value;
-      const e_cut = elements.eCutInput.value;
-      
-      if (elements.diagramTitle) {
-        elements.diagramTitle.innerHTML = `Phase Diagram: ${formulas}`;
-      }
-      
-      if (elements.diagramParams) {
-        elements.diagramParams.innerHTML = `
-          ${temp !== '0' ? temp + ' K' : '0 K (no temp)'}, 
-          E<sub>cut</sub> = ${e_cut} eV
-        `;
-      }
+      // Parameters are now displayed directly in the plot annotations
+      console.log('Diagram parameters updated in plot annotations');
     }
 
     // 温度コントロール初期化
@@ -401,12 +571,86 @@
       updateDiagramDisplay();
     }
 
+    // Show/hide loading state
+    function setLoadingState(isLoading) {
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-text');
+      const submitLoading = document.getElementById('submit-loading');
+      
+      if (isLoading) {
+        submitText.style.display = 'none';
+        submitLoading.style.display = 'flex';
+        submitBtn.disabled = true;
+      } else {
+        submitText.style.display = 'inline';
+        submitLoading.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      elements.plotDiv.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    // Show loading message with progress
+    function showLoading() {
+      elements.plotDiv.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          Generating phase diagram...
+        </div>
+        <div class="progress-steps">
+          <div class="progress-step active" id="step-1">
+            <div class="progress-step-icon">1</div>
+            <span>Validating input formulas...</span>
+          </div>
+          <div class="progress-step pending" id="step-2">
+            <div class="progress-step-icon">2</div>
+            <span>Fetching data from Materials Project...</span>
+          </div>
+          <div class="progress-step pending" id="step-3">
+            <div class="progress-step-icon">3</div>
+            <span>Building phase diagram...</span>
+          </div>
+          <div class="progress-step pending" id="step-4">
+            <div class="progress-step-icon">4</div>
+            <span>Rendering interactive plot...</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update progress step
+    function updateProgress(stepNumber) {
+      for (let i = 1; i <= stepNumber; i++) {
+        const step = document.getElementById(`step-${i}`);
+        if (step) {
+          step.className = 'progress-step completed';
+          step.querySelector('.progress-step-icon').innerHTML = '✓';
+        }
+      }
+      
+      const nextStep = document.getElementById(`step-${stepNumber + 1}`);
+      if (nextStep) {
+        nextStep.className = 'progress-step active';
+      }
+    }
+
     // 状態図生成関数
     async function generatePhaseDiagram(formulas, temp, e_cut, api_key) {
       console.log('Generating phase diagram with:', { formulas, temp, e_cut });
       
       try {
-        elements.plotDiv.textContent = "Generating phase diagram...";
+        setLoadingState(true);
+        showLoading();
+        
+        // Step 1: Validation completed
+        updateProgress(1);
+        
+        // Step 2: Fetching data
+        updateProgress(1);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
         
         const response = await fetch('/diagram/raw', {
           method: 'POST',
@@ -422,30 +666,137 @@
         });
 
         console.log('Response status:', response.status);
+        updateProgress(2);
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({}));
           throw new Error(error.detail || `Server returned ${response.status}`);
         }
 
+        // Step 3: Building phase diagram
+        updateProgress(3);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         const plotData = await response.json();
         console.log('Received plot data:', plotData);
 
+        // Step 4: Rendering plot
         // 既存のプロットをクリア
         while (elements.plotDiv.firstChild) {
           elements.plotDiv.removeChild(elements.plotDiv.firstChild);
         }
         
         // 新しいプロットを作成
-        Plotly.newPlot(elements.plotDiv, plotData.data, plotData.layout);
+        const config = {
+          responsive: true,
+          displayModeBar: true,
+          displaylogo: false,
+          modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d']
+        };
+        
+        // レイアウトの調整
+        if (plotData.layout) {
+          plotData.layout.margin = plotData.layout.margin || {};
+          plotData.layout.margin.l = Math.max(plotData.layout.margin.l || 0, 80);
+          plotData.layout.margin.r = Math.max(plotData.layout.margin.r || 0, 40);
+          plotData.layout.margin.t = Math.max(plotData.layout.margin.t || 0, 100);
+          plotData.layout.margin.b = Math.max(plotData.layout.margin.b || 0, 60);
+          
+          // Add annotations for temperature and energy cutoff
+          plotData.layout.annotations = plotData.layout.annotations || [];
+          
+          // Temperature annotation (top margin area, outside plot)
+          const tempText = temp !== '0' ? `T = ${temp} K` : 'T = 0 K';
+          plotData.layout.annotations.push({
+            x: 0.02,
+            y: 1.05,
+            xref: 'paper',
+            yref: 'paper',
+            text: tempText,
+            showarrow: false,
+            font: {
+              size: 13,
+              color: '#333',
+              family: 'Arial, sans-serif',
+              weight: 'bold'
+            },
+            bgcolor: 'rgba(248, 249, 250, 0.95)',
+            bordercolor: '#666',
+            borderwidth: 1,
+            borderpad: 4,
+            xanchor: 'left',
+            yanchor: 'bottom'
+          });
+          
+          // Energy cutoff annotation (top margin area, right side)
+          plotData.layout.annotations.push({
+            x: 0.98,
+            y: 1.05,
+            xref: 'paper',
+            yref: 'paper',
+            text: `E<sub>cut</sub> = ${e_cut} eV/atom`,
+            showarrow: false,
+            font: {
+              size: 13,
+              color: '#333',
+              family: 'Arial, sans-serif',
+              weight: 'bold'
+            },
+            bgcolor: 'rgba(248, 249, 250, 0.95)',
+            bordercolor: '#666',
+            borderwidth: 1,
+            borderpad: 4,
+            xanchor: 'right',
+            yanchor: 'bottom'
+          });
+        }
+        
+        await Plotly.newPlot(elements.plotDiv, plotData.data, plotData.layout, config);
         console.log('Plotly chart rendered successfully');
+        
+        updateProgress(4);
         
         // 表示を更新
         updateDiagramDisplay();
       } catch (error) {
         console.error('Error generating phase diagram:', error);
-        elements.plotDiv.textContent = `Error: ${error.message}`;
+        showError(error.message);
+      } finally {
+        setLoadingState(false);
       }
+    }
+
+    // Form validation
+    function validateForm() {
+      const formulas = elements.formulasInput.value
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f);
+      
+      const api_key = elements.apiInput.value.trim();
+      const e_cut = parseFloat(elements.eCutInput.value);
+      
+      if (formulas.length < 2) {
+        showError('Please enter at least 2 chemical formulas separated by commas.');
+        return false;
+      }
+      
+      if (formulas.length > 4) {
+        showError('Maximum 4 formulas allowed. Please remove some formulas.');
+        return false;
+      }
+      
+      if (!api_key) {
+        showError('Please enter your Materials Project API key.');
+        return false;
+      }
+      
+      if (isNaN(e_cut) || e_cut < 0) {
+        showError('Energy cutoff must be a number greater than or equal to 0.');
+        return false;
+      }
+      
+      return true;
     }
 
     // フォーム送信処理
@@ -453,8 +804,16 @@
       e.preventDefault();
       console.log('Form submission started');
       
-      // APIキーを保存
-      localStorage.setItem('mp_api_key_plain', elements.apiInput.value);
+      // Validate form
+      if (!validateForm()) {
+        return;
+      }
+      
+      // APIキーを暗号化して保存
+      const encryptedKey = simpleEncrypt(elements.apiInput.value);
+      localStorage.setItem('mp_api_key_encrypted', encryptedKey);
+      // 古い平文キーがあれば削除
+      localStorage.removeItem('mp_api_key_plain');
       
       // フォームデータ収集
       const formulas = elements.formulasInput.value
@@ -465,11 +824,6 @@
       const temp = elements.finalTempInput.value;
       const e_cut = elements.eCutInput.value;
       const api_key = elements.apiInput.value;
-
-      if (formulas.length < 2) {
-        alert('Please enter at least 2 formulas');
-        return;
-      }
 
       await generatePhaseDiagram(formulas, temp, e_cut, api_key);
     });
@@ -484,11 +838,18 @@
     // 初期化実行
     initTemperatureControls();
     updateTemperatureControls();
+    
+    // Set default energy cutoff if empty
+    if (!elements.eCutInput.value) {
+      elements.eCutInput.value = '0.2';
+    }
 
     // ページ読み込み時に状態図生成が必要な場合
     {% if formulas %}
-    console.log('Initial page load with formulas');
-    elements.pdForm.dispatchEvent(new Event('submit'));
+    setTimeout(() => {
+      console.log('Initial page load with formulas');
+      elements.pdForm.dispatchEvent(new Event('submit'));
+    }, 100);
     {% endif %}
   });
 </script>

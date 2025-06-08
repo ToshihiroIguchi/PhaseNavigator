@@ -34,13 +34,13 @@ def make_phase_diagram_plotly(
     # ─── validation ───────────────────────────────────────────
     if temp != 0 and not 300 <= temp <= 2000:
         raise HTTPException(status_code=400,
-            detail="Temperature must be 0 K or between 300 K and 2000 K")
+            detail="Temperature must be 0 K or between 300-2000 K. Please adjust the temperature setting.")
     if len(formulas) < 2:
-        raise HTTPException(status_code=400, detail="Need at least two formulas")
+        raise HTTPException(status_code=400, detail="At least 2 chemical formulas are required. Please add more formulas.")
     if len(formulas) > 4:
-        raise HTTPException(status_code=400, detail="Max 4 formulas allowed")
+        raise HTTPException(status_code=400, detail="Maximum 4 formulas allowed. Please remove some formulas.")
     if e_cut < 0:
-        raise HTTPException(status_code=400, detail="Energy cutoff must be ≥0 eV/atom")
+        raise HTTPException(status_code=400, detail="Energy cutoff must be greater than or equal to 0 eV/atom.")
 
     elements = _elements(formulas)
 
@@ -50,7 +50,7 @@ def make_phase_diagram_plotly(
                    else m.get_entries_in_chemsys(elements, use_gibbs=temp))
 
     if not entries:
-        raise HTTPException(status_code=404, detail="No entries returned")
+        raise HTTPException(status_code=404, detail=f"No materials found for elements {', '.join(elements)} in Materials Project database. Try different chemical formulas.")
 
     # ─── build phase diagram ─────────────────────────────────
     terminals = [Composition(f) for f in formulas[:len(formulas)]]
