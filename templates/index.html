@@ -4,55 +4,220 @@
   <meta charset="utf-8" />
   <title>Phase Navigator</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-
-  <!-- ────────── INTERNAL STYLES ───────────────────────────── -->
   <style>
     :root {
-      /* 統一幅をここで一元管理 */
       --control-width: 420px;
+      --primary-color: #4285f4;
+      --border-color: #ddd;
     }
 
-    body { font-family: Arial, sans-serif; margin:2rem; color:#222; }
+    body { 
+      font-family: 'Segoe UI', Arial, sans-serif; 
+      margin: 2rem; 
+      color: #333;
+      line-height: 1.6;
+    }
 
-    /* ── レイアウト ───────────────────────────────────────── */
     #main-container {
-      display:flex;
-      flex-wrap:wrap;
-      align-items:flex-start;
-      gap:2rem;                 /* フォームと図の間隔 */
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 2.5rem;
+      max-width: 1200px;
+      margin: 0 auto;
     }
+
     #controls {
-      flex:0 0 var(--control-width);
-      max-width:var(--control-width);
+      flex: 0 0 var(--control-width);
+      background: #f9f9f9;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+
     #output {
-      flex:1 1 600px;           /* 図側は残り幅いっぱい */
-      min-width:400px;
+      flex: 1 1 600px;
+      min-width: 400px;
     }
 
-    /* ── タイポ & フォーム ───────────────────────────────── */
-    header { display:flex; align-items:center; margin-bottom:1rem; }
-    header img { height:48px; margin-right:.75rem; }
-    h1 { font-size:1.7rem; margin:0; }
-
-    input,label { margin:.3rem 0; display:block; }
-    input {
-      width:100%;               /* すべて同じ横幅 */
-      padding:6px;
-      box-sizing:border-box;    /* パディングとボーダーを幅に含める */
+    header { 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 1.5rem; 
     }
-    button { padding:6px 12px; margin-top:.6rem; }
-    .warn { color:#c00; }
+    
+    header img { 
+      height: 48px; 
+      margin-right: 1rem; 
+    }
+    
+    h1 { 
+      font-size: 1.8rem; 
+      margin: 0;
+      color: #222;
+    }
 
-    /* ── プロット領域 ────────────────────────────────────── */
-    #plot { width:100%; height:70vh; margin-top:1rem; }
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
 
-    /* ── モバイル（幅768px以下）は縦並び ───────────────── */
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+      color: #555;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.6rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 1rem;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+
+    .toggle-container {
+      margin: 1rem 0;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
+
+    .toggle-label {
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+
+    .temperature-controls {
+      margin-top: 0.8rem;
+      padding: 1rem;
+      background: #f0f7ff;
+      border-radius: 6px;
+      border: 1px solid #d0e3ff;
+      display: none;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    #temp-slider {
+      flex-grow: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: #ddd;
+      outline: none;
+    }
+
+    #temp-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      cursor: pointer;
+    }
+
+    #temp-input {
+      width: 80px;
+      text-align: center;
+    }
+
+    button[type="submit"] {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      margin-top: 1rem;
+    }
+
+    button[type="submit"]:hover {
+      background: #3367d6;
+    }
+
+    .warn {
+      color: #d32f2f;
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+
+    #plot {
+      width: 100%;
+      height: 70vh;
+      margin-top: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
     @media (max-width: 768px) {
-      #controls, #output { flex:1 1 100%; max-width:none; }
+      #main-container {
+        flex-direction: column;
+      }
+      
+      #controls, #output {
+        width: 100%;
+      }
     }
   </style>
-  <!-- ─────────────────────────────────────────────────────── -->
 </head>
 <body>
 
@@ -63,92 +228,270 @@
 
 <div id="main-container">
 
-  <!-- ────────── 左：入力フォーム ───────────────────── -->
   <div id="controls">
     <form id="pd-form" method="post" action="/diagram">
 
-      <label for="formulas">Comma-separated formulas (2–4):</label>
-      <input id="formulas" name="formulas"
-             placeholder="BaO, MgO, SiO2, ZrO2"
-             value="{{ formulas if formulas else '' }}"
-             required />
+      <div class="form-group">
+        <label for="formulas">Comma-separated formulas (2–4):</label>
+        <input id="formulas" name="formulas"
+               placeholder="e.g. BaO, MgO, SiO2"
+               value="{{ formulas if formulas else '' }}"
+               required />
+      </div>
 
-      <label for="temp">Temperature [K] (0 or 300–2000):</label>
-      <input id="temp" type="number" name="temp" min="0" max="2000" step="1"
-             value="{{ temp if temp is not none else 0 }}" required />
+      <div class="toggle-container">
+        <label class="toggle-switch">
+          <input type="checkbox" id="temp-toggle" name="temp_toggle">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Finit Temperature Estimation</span>
+      </div>
 
-      <label for="e_cut">Energy cutoff for unstable phases [eV/atom] (0 = hide):</label>
-      <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
-             value="{{ e_cut if e_cut is not none else 0.2 }}" required />
+      <div id="temp-controls" class="temperature-controls">
+        <label for="temp">Temperature [K] (300–2000):</label>
+        <div class="slider-container">
+          <input type="range" id="temp-slider" name="temp_slider" 
+                 min="300" max="2000" step="10" value="300">
+          <input type="number" id="temp-input" name="temp_input" 
+                 min="300" max="2000" value="300">
+        </div>
+      </div>
 
-      <label for="api-key-input">Materials Project API Key:</label>
-      <input id="api-key-input" type="password" name="api_key"
-             placeholder="Enter your API key" autocomplete="off" required />
+      <input type="hidden" id="final-temp" name="temp" value="0">
 
-      <button type="submit">Generate phase diagram</button>
-      <p class="warn">API key is stored only in this browser (localStorage).</p>
+      <div class="form-group">
+        <label for="e_cut">Energy cutoff for unstable phases [eV/atom]:</label>
+        <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
+               value="{{ e_cut if e_cut is not none else 0.2 }}" required />
+        <small class="warn">0 = hide unstable phases</small>
+      </div>
+
+      <div class="form-group">
+        <label for="api-key-input">Materials Project API Key:</label>
+        <input id="api-key-input" type="password" name="api_key"
+               placeholder="Enter your API key" autocomplete="off" required />
+        <p class="warn">API key is stored only in your browser (localStorage).</p>
+      </div>
+
+      <button type="submit">Generate Phase Diagram</button>
     </form>
   </div>
-  <!-- ────────── /controls ─────────────────────────────── -->
 
-  <!-- ────────── 右：結果表示 ──────────────────────────── -->
   <div id="output">
     {% if formulas %}
-      <h2>Result: {{ formulas }} at {{ temp }} K (E<sub>cut</sub> = {{ e_cut }} eV)</h2>
-      <div id="plot">Loading…</div>
+      <h2 id="diagram-title">Phase Diagram: {{ formulas }}
+        <small id="diagram-params">
+          {% if temp != 0 %}{{ temp }} K{% else %}0 K (no temp){% endif %}, 
+          E<sub>cut</sub> = {{ e_cut }} eV
+        </small>
+      </h2>
+      <div id="plot">Loading phase diagram...</div>
     {% endif %}
   </div>
-  <!-- ────────── /output ──────────────────────────────── -->
 
-</div> <!-- /main-container -->
+</div>
 
-{% if formulas %}
 <script>
-  const KEY_STORAGE = "mp_api_key_plain";
-  const apiInput = document.getElementById("api-key-input");
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded and parsed');
 
-  /* 既存キーの復元 */
-  const storedKey = localStorage.getItem(KEY_STORAGE);
-  if (storedKey) apiInput.value = storedKey;
+    // 要素取得
+    const elements = {
+      tempToggle: document.getElementById('temp-toggle'),
+      tempControls: document.getElementById('temp-controls'),
+      finalTempInput: document.getElementById('final-temp'),
+      tempSlider: document.getElementById('temp-slider'),
+      tempInput: document.getElementById('temp-input'),
+      apiInput: document.getElementById('api-key-input'),
+      pdForm: document.getElementById('pd-form'),
+      plotDiv: document.getElementById('plot'),
+      formulasInput: document.getElementById('formulas'),
+      eCutInput: document.getElementById('e_cut'),
+      diagramTitle: document.getElementById('diagram-title'),
+      diagramParams: document.getElementById('diagram-params')
+    };
 
-  /* 送信時にキーを保存 */
-  document.getElementById("pd-form").addEventListener("submit",
-      () => localStorage.setItem(KEY_STORAGE, apiInput.value));
+    // 要素存在確認
+    for (const [key, element] of Object.entries(elements)) {
+      if (!element) {
+        console.error(`Element not found: ${key}`);
+        return;
+      }
+    }
 
-  /* API キー未入力時はエラー表示 */
-  if (!apiInput.value) {
-    document.getElementById("plot").textContent =
-      "API key not found. Please go back and enter a valid key.";
-  } else {
-    (async () => {
-      const payload = {
-        f: "{{ formulas }}".split(",").map(s => s.trim()),
-        temp: Number("{{ temp }}"),
-        e_cut: Number("{{ e_cut }}")
-      };
+    // APIキーの復元
+    const storedKey = localStorage.getItem('mp_api_key_plain');
+    if (storedKey) {
+      elements.apiInput.value = storedKey;
+      console.log('Restored API key from localStorage');
+    }
 
-      const res = await fetch("/diagram/raw", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-KEY": apiInput.value
-        },
-        body: JSON.stringify(payload)
-      });
+    // タイトルとパラメータ表示を更新する関数
+    function updateDiagramDisplay() {
+      const formulas = elements.formulasInput.value.split(',').map(f => f.trim()).filter(f => f).join(', ');
+      const temp = elements.finalTempInput.value;
+      const e_cut = elements.eCutInput.value;
+      
+      if (elements.diagramTitle) {
+        elements.diagramTitle.innerHTML = `Phase Diagram: ${formulas}`;
+      }
+      
+      if (elements.diagramParams) {
+        elements.diagramParams.innerHTML = `
+          ${temp !== '0' ? temp + ' K' : '0 K (no temp)'}, 
+          E<sub>cut</sub> = ${e_cut} eV
+        `;
+      }
+    }
 
-      if (!res.ok) {
-        document.getElementById("plot").textContent =
-          "Error " + res.status + ": " + res.statusText;
+    // 温度コントロール初期化
+    function initTemperatureControls() {
+      console.log('Initializing temperature controls');
+      elements.tempControls.style.display = 'none';
+      elements.finalTempInput.value = '0';
+      elements.tempSlider.value = '300';
+      elements.tempInput.value = '300';
+      updateDiagramDisplay();
+    }
+
+    // トグル状態更新
+    function updateTemperatureControls() {
+      const isChecked = elements.tempToggle.checked;
+      console.log('Temperature toggle changed to:', isChecked);
+      
+      elements.tempControls.style.display = isChecked ? 'block' : 'none';
+      elements.finalTempInput.value = isChecked ? elements.tempInput.value : '0';
+      
+      if (isChecked && !elements.tempInput.value) {
+        elements.tempInput.value = '300';
+        elements.tempSlider.value = '300';
+        elements.finalTempInput.value = '300';
+      }
+      
+      updateDiagramDisplay();
+    }
+
+    // スライダーと入力値の同期
+    function syncTemperatureValues() {
+      const value = elements.tempSlider.value;
+      elements.tempInput.value = value;
+      if (elements.tempToggle.checked) {
+        elements.finalTempInput.value = value;
+      }
+      console.log('Synced temperature values:', value);
+      updateDiagramDisplay();
+    }
+
+    // 入力値の検証
+    function validateTemperatureInput() {
+      let value = elements.tempInput.value;
+      if (value === '') value = '300';
+      value = Math.min(2000, Math.max(300, parseInt(value, 10) || 300));
+      elements.tempInput.value = value;
+      elements.tempSlider.value = value;
+      if (elements.tempToggle.checked) {
+        elements.finalTempInput.value = value;
+      }
+      console.log('Validated temperature:', value);
+      updateDiagramDisplay();
+    }
+
+    // フォーム入力変更時の処理
+    function handleFormInputChange() {
+      updateDiagramDisplay();
+    }
+
+    // 状態図生成関数
+    async function generatePhaseDiagram(formulas, temp, e_cut, api_key) {
+      console.log('Generating phase diagram with:', { formulas, temp, e_cut });
+      
+      try {
+        elements.plotDiv.textContent = "Generating phase diagram...";
+        
+        const response = await fetch('/diagram/raw', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': api_key
+          },
+          body: JSON.stringify({
+            f: formulas,
+            temp: Number(temp),
+            e_cut: Number(e_cut)
+          })
+        });
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || `Server returned ${response.status}`);
+        }
+
+        const plotData = await response.json();
+        console.log('Received plot data:', plotData);
+
+        // 既存のプロットをクリア
+        while (elements.plotDiv.firstChild) {
+          elements.plotDiv.removeChild(elements.plotDiv.firstChild);
+        }
+        
+        // 新しいプロットを作成
+        Plotly.newPlot(elements.plotDiv, plotData.data, plotData.layout);
+        console.log('Plotly chart rendered successfully');
+        
+        // 表示を更新
+        updateDiagramDisplay();
+      } catch (error) {
+        console.error('Error generating phase diagram:', error);
+        elements.plotDiv.textContent = `Error: ${error.message}`;
+      }
+    }
+
+    // フォーム送信処理
+    elements.pdForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      console.log('Form submission started');
+      
+      // APIキーを保存
+      localStorage.setItem('mp_api_key_plain', elements.apiInput.value);
+      
+      // フォームデータ収集
+      const formulas = elements.formulasInput.value
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f);
+      
+      const temp = elements.finalTempInput.value;
+      const e_cut = elements.eCutInput.value;
+      const api_key = elements.apiInput.value;
+
+      if (formulas.length < 2) {
+        alert('Please enter at least 2 formulas');
         return;
       }
 
-      const fig = await res.json();
-      document.getElementById("plot").innerHTML = "";
-      Plotly.newPlot("plot", fig.data, fig.layout);
-    })();
-  }
+      await generatePhaseDiagram(formulas, temp, e_cut, api_key);
+    });
+
+    // イベントリスナー設定
+    elements.tempToggle.addEventListener('change', updateTemperatureControls);
+    elements.tempSlider.addEventListener('input', syncTemperatureValues);
+    elements.tempInput.addEventListener('input', validateTemperatureInput);
+    elements.formulasInput.addEventListener('input', handleFormInputChange);
+    elements.eCutInput.addEventListener('input', handleFormInputChange);
+
+    // 初期化実行
+    initTemperatureControls();
+    updateTemperatureControls();
+
+    // ページ読み込み時に状態図生成が必要な場合
+    {% if formulas %}
+    console.log('Initial page load with formulas');
+    elements.pdForm.dispatchEvent(new Event('submit'));
+    {% endif %}
+  });
 </script>
-{% endif %}
 
 </body>
 </html>

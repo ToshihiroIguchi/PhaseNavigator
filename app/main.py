@@ -30,9 +30,15 @@ def index(req: Request):
 def diagram(
     req: Request,
     formulas: str = Form(...),
-    temp: int = Form(...),
+    temp: str = Form("0"),  # 文字列として受け取り
     e_cut: float = Form(...),
 ):
+    # 温度値の変換処理
+    try:
+        temp_int = int(temp) if temp.strip() else 0
+    except ValueError:
+        temp_int = 0
+
     chems = [c.strip() for c in formulas.split(",") if c.strip()]
     if len(chems) < 2:
         raise HTTPException(status_code=400, detail="Enter ≥2 formulas")
@@ -41,7 +47,7 @@ def diagram(
         {
             "request": req,
             "formulas": ",".join(chems),
-            "temp": temp,
+            "temp": temp_int,
             "e_cut": e_cut,
         },
     )
