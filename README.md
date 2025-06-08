@@ -14,13 +14,15 @@
 ## ✨ Key Features
 
 - ⚡ **Fast Performance**: Direct query to Materials Project with on-the-fly Plotly rendering
-- 🔐 **Secure API Storage**: Encrypted API key storage in browser localStorage  
+- 🔐 **Secure API Storage**: Encrypted API key storage in browser localStorage with automatic persistence
 - 🌡️ **Temperature Control**: Support for 0 K or finite temperature (300–2000 K) calculations
 - ⚙️ **Energy Cutoff**: Customizable energy cutoff for unstable phases visualization
 - 📱 **Responsive Design**: Mobile-friendly interface with optimized layouts
 - 📊 **Interactive Plots**: Fully interactive phase diagrams with zoom, pan, and hover
 - 🔄 **Progress Tracking**: Real-time progress indicators during diagram generation
 - 💾 **Smart Defaults**: Automatic form filling and parameter memory
+- 🚫 **No Page Navigation**: Seamless single-page application with AJAX-based diagram generation
+- 🛡️ **Robust Error Handling**: Comprehensive validation and user-friendly error messages
 
 ## 🚀 Quick Start
 
@@ -39,6 +41,20 @@ open http://localhost:8000
 
 ### Manual Installation
 
+#### Prerequisites
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install -y python3-pip build-essential gfortran git libblas-dev liblapack-dev
+
+# macOS (using Homebrew)
+brew install python@3.10 gcc gfortran openblas lapack
+
+# Windows (using conda)
+conda install python=3.10 pip
+```
+
+#### Installation Steps
 ```bash
 # Clone the repository
 git clone https://github.com/ToshihiroIguchi/PhaseNavigator.git
@@ -59,11 +75,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 1. **Get Materials Project API Key**: Sign up at [materialsproject.org](https://materialsproject.org) and obtain your API key
 2. **Enter Chemical Formulas**: Input 2-4 chemical formulas (e.g., `BaO, MgO, SiO2`)
-3. **Set Parameters**: 
+3. **Save API Key**: Enter your API key once - it will be encrypted and stored securely in your browser for future use
+4. **Set Parameters**: 
    - Choose temperature (0 K for ground state, or 300-2000 K for finite temperature)
    - Adjust energy cutoff for unstable phases (default: 0.2 eV/atom)
-4. **Generate Diagram**: Click "Generate Phase Diagram" and watch the progress
-5. **Explore Results**: Interactive phase diagram with temperature and energy cutoff displayed
+5. **Generate Diagram**: Click "Generate Phase Diagram" and watch the progress
+6. **Explore Results**: Interactive phase diagram with temperature and energy cutoff displayed
 
 ### Example Input Combinations
 
@@ -87,10 +104,12 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `POST /diagram/raw` - JSON API for phase diagram data
 
 ### Security Features
-- Client-side API key encryption
+- Client-side API key encryption with hex encoding for reliability
+- Automatic API key persistence with format validation
 - Rate limiting (10 requests per 30 seconds)
 - Input validation and sanitization
 - No server-side API key storage
+- Secure localStorage management with corruption detection
 
 ## 📸 Screenshots
 
@@ -120,9 +139,10 @@ services:
 
 ## 📝 Requirements
 
-- **Docker** (recommended) or Python 3.10+
+- **Docker** (recommended) or Python 3.10+ with pip
 - **Materials Project API Key** (free registration required)
 - **Modern web browser** with JavaScript enabled
+- **System dependencies** (for manual installation): build-essential, gfortran, git, libblas-dev, liblapack-dev
 
 ## 🤝 Contributing
 
@@ -142,6 +162,45 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [pymatgen](https://pymatgen.org) for materials analysis tools
 - [Plotly.js](https://plotly.com/javascript/) for interactive plotting capabilities
 - [FastAPI](https://fastapi.tiangolo.com) for the modern web framework
+
+## 🐛 Troubleshooting
+
+### Common Installation Issues
+
+**Docker not found:**
+```bash
+# Install Docker on Ubuntu/Debian
+sudo apt update && sudo apt install docker.io
+sudo systemctl start docker
+sudo usermod -aG docker $USER
+```
+
+**pip not found:**
+```bash
+# Ubuntu/Debian
+sudo apt install python3-pip
+
+# macOS
+python3 -m ensurepip --upgrade
+```
+
+**Permission denied for Docker:**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+# Log out and back in, or run:
+newgrp docker
+```
+
+**Build dependencies missing:**
+```bash
+# Ubuntu/Debian
+sudo apt install build-essential gfortran git libblas-dev liblapack-dev
+
+# CentOS/RHEL
+sudo yum groupinstall "Development Tools"
+sudo yum install gcc-gfortran git blas-devel lapack-devel
+```
 
 ## 📞 Support
 

@@ -393,7 +393,7 @@
 <div id="main-container">
 
   <div id="controls">
-    <form id="pd-form" method="post" action="/diagram">
+    <form id="pd-form">
 
       <div class="form-group">
         <label for="formulas">Comma-separated formulas (2–4):</label>
@@ -433,11 +433,11 @@
       <div class="form-group">
         <label for="api-key-input">Materials Project API Key:</label>
         <input id="api-key-input" type="password" name="api_key"
-               placeholder="Enter your API key" autocomplete="off" required />
+               placeholder="32-character API key from materialsproject.org" autocomplete="off" required />
         <p class="warn">API key is encrypted and stored securely in your browser (localStorage).</p>
       </div>
 
-      <button type="submit" id="submit-btn">
+      <button type="button" id="submit-btn">
         <span id="submit-text">Generate Phase Diagram</span>
         <span id="submit-loading" style="display: none;">
           <div class="loading-spinner"></div>
@@ -448,9 +448,7 @@
   </div>
 
   <div id="output">
-    {% if formulas %}
-      <div id="plot">Loading phase diagram...</div>
-    {% endif %}
+    <div id="plot"></div>
   </div>
 
 </div>
@@ -458,6 +456,16 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM fully loaded and parsed');
+    console.log('🌐 Page URL:', window.location.href);
+    console.log('💾 localStorage available:', typeof Storage !== 'undefined');
+    console.log('🔑 Stored key exists:', !!localStorage.getItem('mp_api_key_encrypted'));
+    
+    // 既存のlocalStorageキーをすべて確認
+    console.log('📦 All localStorage keys:');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      console.log(`  ${key}: ${localStorage.getItem(key) ? 'exists' : 'null'}`);
+    }
 
     // 要素取得
     const elements = {
@@ -470,7 +478,8 @@
       pdForm: document.getElementById('pd-form'),
       plotDiv: document.getElementById('plot'),
       formulasInput: document.getElementById('formulas'),
-      eCutInput: document.getElementById('e_cut')
+      eCutInput: document.getElementById('e_cut'),
+      submitBtn: document.getElementById('submit-btn')
     };
 
     // 要素存在確認
@@ -481,31 +490,82 @@
       }
     }
 
-    // Simple encryption/decryption functions
+    // Simple encryption/decryption functions - using hex encoding for reliability
     function simpleEncrypt(text) {
-      return btoa(text.split('').map(char => 
-        String.fromCharCode(char.charCodeAt(0) + 3)
-      ).join(''));
-    }
-    
-    function simpleDecrypt(encrypted) {
+      if (!text) return '';
       try {
-        return atob(encrypted).split('').map(char => 
-          String.fromCharCode(char.charCodeAt(0) - 3)
-        ).join('');
+        const key = 'PhaseNavigatorKey';
+        let encrypted = '';
+        for (let i = 0; i < text.length; i++) {
+          const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+          // Convert to hex for safe storage
+          encrypted += charCode.toString(16).padStart(2, '0');
+        }
+        return encrypted;
       } catch (e) {
+        console.error('Encryption failed:', e);
         return '';
       }
     }
     
-    // APIキーの復元
-    const storedKey = localStorage.getItem('mp_api_key_encrypted');
-    if (storedKey) {
-      const decryptedKey = simpleDecrypt(storedKey);
-      if (decryptedKey) {
-        elements.apiInput.value = decryptedKey;
-        console.log('Restored encrypted API key from localStorage');
+    function simpleDecrypt(encrypted) {
+      if (!encrypted) return '';
+      try {
+        const key = 'PhaseNavigatorKey';
+        let decrypted = '';
+        // Process hex pairs
+        for (let i = 0; i < encrypted.length; i += 2) {
+          const hexPair = encrypted.substr(i, 2);
+          const charCode = parseInt(hexPair, 16) ^ key.charCodeAt((i / 2) % key.length);
+          decrypted += String.fromCharCode(charCode);
+        }
+        return decrypted;
+      } catch (e) {
+        console.error('Decryption failed:', e);
+        return '';
       }
+    }
+    
+    // APIキーの復元関数
+    function restoreApiKey() {
+      console.log('Attempting to restore API key...');
+      console.log('localStorage available:', typeof Storage !== 'undefined');
+      
+      try {
+        const storedKey = localStorage.getItem('mp_api_key_encrypted');
+        console.log('Stored key found:', !!storedKey);
+        console.log('Stored key length:', storedKey ? storedKey.length : 0);
+        
+        if (storedKey) {
+          const decryptedKey = simpleDecrypt(storedKey);
+          console.log('Decrypted key success:', !!decryptedKey);
+          console.log('Decrypted key length:', decryptedKey ? decryptedKey.length : 0);
+          
+          // Validate decrypted key format
+          if (decryptedKey && (decryptedKey.length !== 32 || !/^[A-Za-z0-9]{32}$/.test(decryptedKey))) {
+            console.log('❌ Decrypted key format invalid');
+            console.log('  Expected: 32 alphanumeric characters');
+            console.log('  Actual length:', decryptedKey.length);
+            console.log('  First 8 chars:', decryptedKey.substring(0, Math.min(8, decryptedKey.length)));
+            console.log('  Contains non-alphanumeric:', !/^[A-Za-z0-9]*$/.test(decryptedKey));
+            console.log('  Character codes:', Array.from(decryptedKey.substring(0, 8)).map(c => c.charCodeAt(0)));
+            // Clear corrupted key
+            localStorage.removeItem('mp_api_key_encrypted');
+            console.log('🗑️ Cleared corrupted stored key');
+          } else if (decryptedKey && elements.apiInput) {
+            elements.apiInput.value = decryptedKey;
+            console.log('✅ API key restored to input field');
+            return true;
+          } else {
+            console.error('❌ API input element not found or decryption failed');
+          }
+        } else {
+          console.log('ℹ️ No stored API key found');
+        }
+      } catch (error) {
+        console.error('❌ Error restoring API key:', error);
+      }
+      return false;
     }
 
     // パラメータ表示を更新する関数（状態図内に表示するため簡素化）
@@ -652,25 +712,120 @@
         updateProgress(1);
         await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
         
-        const response = await fetch('/diagram/raw', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-KEY': api_key
-          },
-          body: JSON.stringify({
-            f: formulas,
-            temp: Number(temp),
-            e_cut: Number(e_cut)
-          })
+        // Data type validation and conversion
+        const tempNumber = Number(temp);
+        const eCutNumber = Number(e_cut);
+        
+        console.log('🔍 Data conversion check:');
+        console.log('  temp (raw):', temp, '→ (number):', tempNumber, '(valid):', !isNaN(tempNumber));
+        console.log('  e_cut (raw):', e_cut, '→ (number):', eCutNumber, '(valid):', !isNaN(eCutNumber));
+        console.log('  formulas type:', Array.isArray(formulas), 'length:', formulas.length);
+        
+        if (isNaN(tempNumber)) {
+          throw new Error(`Invalid temperature value: ${temp}`);
+        }
+        if (isNaN(eCutNumber)) {
+          throw new Error(`Invalid e_cut value: ${e_cut}`);
+        }
+        if (!Array.isArray(formulas) || formulas.length === 0) {
+          throw new Error(`Invalid formulas array: ${formulas}`);
+        }
+        
+        const requestData = {
+          f: formulas,
+          temp: tempNumber,
+          e_cut: eCutNumber
+        };
+        
+        console.log('🚀 Sending request to /diagram/raw');
+        console.log('📊 Request data:', JSON.stringify(requestData, null, 2));
+        
+        // JSON serialization validation
+        try {
+          const jsonString = JSON.stringify(requestData);
+          const parsedBack = JSON.parse(jsonString);
+          console.log('✅ JSON serialization test passed');
+          console.log('🔍 Serialized length:', jsonString.length);
+        } catch (jsonError) {
+          console.log('❌ JSON serialization failed:', jsonError);
+          throw new Error(`JSON serialization error: ${jsonError.message}`);
+        }
+        console.log('🔑 API key length:', api_key.length);
+        console.log('📧 Request headers:', {
+          'Content-Type': 'application/json',
+          'X-API-KEY': `${api_key.substring(0, 4)}...${api_key.substring(28, 32)}` // Only show first 4 and last 4 chars
         });
+        
+        // Validate API key format with detailed logging
+        console.log('🔍 API key validation:');
+        console.log('  Raw key length:', api_key.length);
+        console.log('  First 8 chars:', api_key.substring(0, Math.min(8, api_key.length)));
+        console.log('  Character codes:', Array.from(api_key.substring(0, 8)).map(c => c.charCodeAt(0)));
+        
+        if (api_key.length !== 32) {
+          console.log('❌ API key length validation failed');
+          throw new Error(`API key must be exactly 32 characters long. Current length: ${api_key.length}`);
+        }
+        
+        if (!/^[A-Za-z0-9]{32}$/.test(api_key)) {
+          console.log('❌ API key format validation failed');
+          console.log('  Contains non-alphanumeric characters');
+          // Clear potentially corrupted stored key
+          localStorage.removeItem('mp_api_key_encrypted');
+          console.log('🗑️ Cleared stored key due to format validation failure');
+          throw new Error('API key format is invalid. Expected 32 alphanumeric characters only.');
+        }
+        console.log('✅ API key format validation passed');
+        
+        let response;
+        try {
+          response = await fetch('/diagram/raw', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': api_key
+            },
+            body: JSON.stringify(requestData)
+          });
+          console.log('✅ Fetch completed successfully');
+        } catch (fetchError) {
+          console.log('❌ Fetch failed:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}`);
+        }
 
         console.log('Response status:', response.status);
         updateProgress(2);
 
         if (!response.ok) {
-          const error = await response.json().catch(() => ({}));
-          throw new Error(error.detail || `Server returned ${response.status}`);
+          console.log('❌ Response failed with status:', response.status);
+          console.log('❌ Response headers:', [...response.headers.entries()]);
+          
+          let error = {};
+          try {
+            const responseText = await response.text();
+            console.log('❌ Raw response text:', responseText);
+            error = JSON.parse(responseText);
+          } catch (parseError) {
+            console.log('❌ Failed to parse response as JSON:', parseError);
+            error = { detail: `HTTP ${response.status}: Could not parse response` };
+          }
+          
+          console.log('❌ Parsed error object:', error);
+          
+          let errorMessage = error.detail || `Server returned ${response.status}`;
+          
+          // Check if the error contains Materials Project API error info
+          if (typeof error.detail === 'string' && error.detail.includes('Invalid authentication credentials')) {
+            errorMessage = 'Invalid API key. Please check your Materials Project API key and ensure it is 32 characters long.';
+          } else if (response.status === 401) {
+            errorMessage = 'Invalid API key. Please check your Materials Project API key.';
+          } else if (response.status === 400) {
+            errorMessage = `Invalid request: ${error.detail || 'Please check your input parameters.'}`;
+          } else if (response.status === 429) {
+            errorMessage = 'Rate limit exceeded. Please wait 30 seconds before trying again.';
+          }
+          
+          throw new Error(errorMessage);
         }
 
         // Step 3: Building phase diagram
@@ -715,15 +870,11 @@
             text: tempText,
             showarrow: false,
             font: {
-              size: 13,
+              size: 14,
               color: '#333',
               family: 'Arial, sans-serif',
               weight: 'bold'
             },
-            bgcolor: 'rgba(248, 249, 250, 0.95)',
-            bordercolor: '#666',
-            borderwidth: 1,
-            borderpad: 4,
             xanchor: 'left',
             yanchor: 'bottom'
           });
@@ -737,15 +888,11 @@
             text: `E<sub>cut</sub> = ${e_cut} eV/atom`,
             showarrow: false,
             font: {
-              size: 13,
+              size: 14,
               color: '#333',
               family: 'Arial, sans-serif',
               weight: 'bold'
             },
-            bgcolor: 'rgba(248, 249, 250, 0.95)',
-            bordercolor: '#666',
-            borderwidth: 1,
-            borderpad: 4,
             xanchor: 'right',
             yanchor: 'bottom'
           });
@@ -771,10 +918,17 @@
       const formulas = elements.formulasInput.value
         .split(',')
         .map(f => f.trim())
-        .filter(f => f);
+        .filter(f => f && f.length > 0 && f !== '');
       
       const api_key = elements.apiInput.value.trim();
       const e_cut = parseFloat(elements.eCutInput.value);
+      
+      console.log('🔍 Validating form:');
+      console.log('  📝 Raw input:', elements.formulasInput.value);
+      console.log('  🧪 Processed formulas:', formulas);
+      console.log('  📊 Formula count:', formulas.length);
+      console.log('  🔑 API key length:', api_key.length);
+      console.log('  ⚡ E_cut:', e_cut);
       
       if (formulas.length < 2) {
         showError('Please enter at least 2 chemical formulas separated by commas.');
@@ -786,8 +940,21 @@
         return false;
       }
       
+      // Check for empty formulas
+      for (let i = 0; i < formulas.length; i++) {
+        if (!formulas[i] || formulas[i].trim() === '') {
+          showError(`Formula ${i + 1} is empty. Please check your input.`);
+          return false;
+        }
+      }
+      
       if (!api_key) {
         showError('Please enter your Materials Project API key.');
+        return false;
+      }
+      
+      if (api_key.length !== 32) {
+        showError('API key must be exactly 32 characters long.');
         return false;
       }
       
@@ -799,10 +966,15 @@
       return true;
     }
 
-    // フォーム送信処理
-    elements.pdForm.addEventListener('submit', async function(e) {
+    // フォーム送信処理をボタンクリックに変更  
+    console.log('🔘 Setting up submit button click listener...');
+    console.log('🔘 Submit button element:', elements.submitBtn);
+    
+    elements.submitBtn.addEventListener('click', async function(e) {
       e.preventDefault();
-      console.log('Form submission started');
+      e.stopPropagation();
+      console.log('🚀 Button clicked! Form submission started');
+      console.log('🔍 Event object:', e);
       
       // Validate form
       if (!validateForm()) {
@@ -810,22 +982,63 @@
       }
       
       // APIキーを暗号化して保存
-      const encryptedKey = simpleEncrypt(elements.apiInput.value);
-      localStorage.setItem('mp_api_key_encrypted', encryptedKey);
-      // 古い平文キーがあれば削除
-      localStorage.removeItem('mp_api_key_plain');
+      const apiKeyValue = elements.apiInput.value.trim();
+      console.log('💾 Saving API key:');
+      console.log('  Original length:', apiKeyValue.length);
+      console.log('  Original format valid:', /^[A-Za-z0-9]{32}$/.test(apiKeyValue));
+      
+      try {
+        const encryptedKey = simpleEncrypt(apiKeyValue);
+        console.log('🔐 Encryption result:');
+        console.log('  Encrypted length:', encryptedKey.length);
+        console.log('  Encrypted preview:', encryptedKey.substring(0, 16) + '...');
+        
+        localStorage.setItem('mp_api_key_encrypted', encryptedKey);
+        
+        // 保存確認とテスト復元
+        const verification = localStorage.getItem('mp_api_key_encrypted');
+        console.log('✅ Storage verification:', verification === encryptedKey);
+        
+        // 即座にテスト復元
+        const testDecrypt = simpleDecrypt(verification);
+        console.log('🧪 Test decryption:');
+        console.log('  Decrypted length:', testDecrypt.length);
+        console.log('  Decrypted matches original:', testDecrypt === apiKeyValue);
+        console.log('  Decrypted format valid:', /^[A-Za-z0-9]{32}$/.test(testDecrypt));
+        
+        // 古い平文キーがあれば削除
+        localStorage.removeItem('mp_api_key_plain');
+      } catch (error) {
+        console.error('❌ Error saving API key:', error);
+      }
       
       // フォームデータ収集
       const formulas = elements.formulasInput.value
         .split(',')
         .map(f => f.trim())
-        .filter(f => f);
+        .filter(f => f && f.length > 0 && f !== '');
       
       const temp = elements.finalTempInput.value;
       const e_cut = elements.eCutInput.value;
-      const api_key = elements.apiInput.value;
+      const api_key = elements.apiInput.value.trim();
+      
+      console.log('📋 Form data collected:');
+      console.log('  🧪 Formulas raw input:', elements.formulasInput.value);
+      console.log('  🧪 Formulas processed:', formulas);
+      console.log('  🧪 Formulas count:', formulas.length);
+      console.log('  🌡️ Temperature:', temp, '(type:', typeof temp, ')');
+      console.log('  ⚡ E_cut:', e_cut, '(type:', typeof e_cut, ')');
+      console.log('  🔑 API key length:', api_key.length);
 
       await generatePhaseDiagram(formulas, temp, e_cut, api_key);
+    });
+
+    // フォーム送信を完全に阻止
+    elements.pdForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Form submit event blocked');
+      return false;
     });
 
     // イベントリスナー設定
@@ -843,6 +1056,18 @@
     if (!elements.eCutInput.value) {
       elements.eCutInput.value = '0.2';
     }
+    
+    // APIキーの復元を早期に実行
+    console.log('🔄 Starting API key restoration...');
+    restoreApiKey();
+    
+    // 追加のデバッグ - ページロード後の状態確認
+    setTimeout(() => {
+      console.log('📋 Page load status check:');
+      console.log('  API input value:', elements.apiInput.value);
+      console.log('  API input length:', elements.apiInput.value.length);
+      console.log('  localStorage has key:', !!localStorage.getItem('mp_api_key_encrypted'));
+    }, 500);
 
     // ページ読み込み時に状態図生成が必要な場合
     {% if formulas %}
