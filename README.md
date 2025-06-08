@@ -41,7 +41,7 @@ open http://localhost:8000
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/ToshihiroIguchi/PhaseNavigator.git
 cd PhaseNavigator
 
 # Install dependencies
