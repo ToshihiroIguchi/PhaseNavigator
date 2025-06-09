@@ -152,9 +152,29 @@ services:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📄 License
+## ⚖️ Legal & Disclaimers
 
+### License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Disclaimer
+This software is provided "as is" without warranty of any kind. The authors are not responsible for:
+- Data accuracy or completeness from the Materials Project API
+- Any damages or losses resulting from the use of this software
+- The availability or reliability of external APIs and services
+- Any research conclusions or decisions made based on generated phase diagrams
+
+### Data Source Attribution
+This application uses data from the **Materials Project**, which should be properly cited in any research or publication:
+> Jain, A., Ong, S. P., Hautier, G., Chen, W., Richards, W. D., Dacek, S., ... & Persson, K. A. (2013). Commentary: The Materials Project: A materials genome approach to accelerating materials innovation. APL materials, 1(1), 011002.
+
+### Usage Responsibility
+Users are responsible for:
+- Obtaining and maintaining valid Materials Project API keys
+- Complying with Materials Project's terms of service
+- Proper attribution of data sources in research and publications
+- Validating computational results through appropriate scientific methods
+- Ensuring compliance with their institution's data usage policies
 
 ## 🙏 Acknowledgments
 
