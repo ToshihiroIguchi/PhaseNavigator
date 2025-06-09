@@ -73,7 +73,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ## 📋 Usage
 
-1. **Get Materials Project API Key**: Sign up at [materialsproject.org](https://materialsproject.org) and obtain your API key
+1. **Get Materials Project API Key**: Sign up and get your free API key at [next-gen.materialsproject.org/api](https://next-gen.materialsproject.org/api)
 2. **Enter Chemical Formulas**: Input 2-4 chemical formulas (e.g., `BaO, MgO, SiO2`)
 3. **Save API Key**: Enter your API key once - it will be encrypted and stored securely in your browser for future use
 4. **Set Parameters**: 
