@@ -29,6 +29,7 @@ def make_phase_diagram_plotly(
     api_key: str,
     ip: str,
     e_cut: float,
+    functional: str = "GGA_GGA_U_R2SCAN",
 ) -> JSONResponse:
 
     # ─── validation ───────────────────────────────────────────
@@ -44,10 +45,22 @@ def make_phase_diagram_plotly(
 
     elements = _elements(formulas)
 
+    # ─── functional mapping ─────────────────────────────────
+    functional_map = {
+        "GGA_GGA_U_R2SCAN": ["GGA_GGA+U", "R2SCAN"],
+        "R2SCAN": ["R2SCAN"],
+        "GGA_GGA_U": ["GGA_GGA+U"]
+    }
+    
+    if functional not in functional_map:
+        raise HTTPException(status_code=400, detail=f"Unsupported functional: {functional}. Supported: GGA_GGA_U_R2SCAN, R2SCAN, GGA_GGA_U")
+    
+    thermo_types = functional_map[functional]
+
     # ─── fetch Materials Project entries ─────────────────────
     with MPRester(api_key=api_key) as m:
-        entries = (m.get_entries_in_chemsys(elements) if temp == 0
-                   else m.get_entries_in_chemsys(elements, use_gibbs=temp))
+        entries = (m.get_entries_in_chemsys(elements, additional_criteria={"thermo_types": thermo_types}) if temp == 0
+                   else m.get_entries_in_chemsys(elements, use_gibbs=temp, additional_criteria={"thermo_types": thermo_types}))
 
     if not entries:
         raise HTTPException(status_code=404, detail=f"No materials found for elements {', '.join(elements)} in Materials Project database. Try different chemical formulas.")
@@ -58,7 +71,7 @@ def make_phase_diagram_plotly(
 
     fig = PDPlotter(pd, backend="plotly", show_unstable=e_cut).get_plot()
 
-    logger.info("PD  T=%dK  elems=%s  e_cut=%.3f  keyHash=%s  ip=%s",
-                temp, ",".join(elements), e_cut, _hash_key(api_key), ip)
+    logger.info("PD  T=%dK  elems=%s  e_cut=%.3f  func=%s  keyHash=%s  ip=%s",
+                temp, ",".join(elements), e_cut, functional, _hash_key(api_key), ip)
 
     return JSONResponse(content=json.loads(fig.to_json()))

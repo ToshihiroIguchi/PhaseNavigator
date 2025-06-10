@@ -54,6 +54,7 @@ def diagram(
     formulas: str = Form(...),
     temp: str = Form("0"),  # 文字列として受け取り
     e_cut: float = Form(0.2),  # デフォルト値を0.2に設定
+    functional: str = Form("GGA_GGA_U_R2SCAN"),  # デフォルト汎関数
 ):
     # 温度値の変換処理
     try:
@@ -71,6 +72,7 @@ def diagram(
             "formulas": ",".join(chems),
             "temp": temp_int,
             "e_cut": e_cut,
+            "functional": functional,
         },
     )
 
@@ -79,6 +81,7 @@ class DiagramRequest(BaseModel):
     f: List[str]
     temp: int
     e_cut: float
+    functional: str
 
 
 @app.post("/diagram/raw", response_class=JSONResponse)
@@ -91,6 +94,7 @@ def diagram_raw(
     print(f"  📊 Formulas: {payload.f}")
     print(f"  🌡️ Temperature: {payload.temp}")
     print(f"  ⚡ E_cut: {payload.e_cut}")
+    print(f"  🔬 Functional: {payload.functional}")
     print(f"  🔑 API key length: {len(x_api_key)}")
     print(f"  🌐 Client IP: {ip}")
     
@@ -99,7 +103,7 @@ def diagram_raw(
     
     try:
         return make_phase_diagram_plotly(
-            payload.f, payload.temp, x_api_key, ip, e_cut=payload.e_cut
+            payload.f, payload.temp, x_api_key, ip, e_cut=payload.e_cut, functional=payload.functional
         )
     except Exception as e:
         print(f"❌ Error in make_phase_diagram_plotly: {str(e)}")

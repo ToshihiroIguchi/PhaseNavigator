@@ -89,7 +89,50 @@
     }
 
     .form-group {
-      margin-bottom: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .form-group-half {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    
+    .info-compact {
+      background: var(--primary-50);
+      border: 1px solid var(--primary-200);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--gray-700);
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+    
+    .api-info {
+      font-size: 0.75rem;
+      color: var(--gray-600);
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+    }
+    
+    .api-info a {
+      color: var(--primary-600);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .api-info a:hover {
+      color: var(--primary-700);
+      text-decoration: underline;
     }
 
     label {
@@ -102,7 +145,8 @@
 
     input[type="text"],
     input[type="number"],
-    input[type="password"] {
+    input[type="password"],
+    select {
       width: 100%;
       padding: 0.75rem 1rem;
       border: 1px solid var(--gray-400);
@@ -133,11 +177,14 @@
     }
 
     .toggle-container {
-      margin: 1.25rem 0;
-      padding: 0.875rem;
+      margin: 1rem 0;
+      padding: 0.75rem;
       background: #ffffff;
       border-radius: var(--radius);
       border: 1px solid var(--gray-300);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .toggle-switch {
@@ -187,15 +234,14 @@
     }
 
     .toggle-label {
-      margin-left: 12px;
-      vertical-align: middle;
       font-weight: 600;
       color: #000000;
+      font-size: 0.875rem;
     }
 
     .temperature-controls {
-      margin-top: 0.875rem;
-      padding: 1.25rem;
+      margin-top: 0.75rem;
+      padding: 1rem;
       background: var(--primary-50);
       border-radius: var(--radius);
       border: 1px solid var(--primary-300);
@@ -251,7 +297,7 @@
       cursor: pointer;
       transition: all 0.2s ease;
       width: 100%;
-      margin-top: 1.25rem;
+      margin-top: 1rem;
       box-shadow: var(--shadow);
     }
 
@@ -461,6 +507,11 @@
         height: 50vh;
       }
       
+      .form-row {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      
       .slider-container {
         flex-direction: column;
         gap: 0.5rem;
@@ -601,7 +652,7 @@
           <input type="checkbox" id="temp-toggle" name="temp_toggle">
           <span class="slider"></span>
         </label>
-        <span class="toggle-label">Finit Temperature Estimation</span>
+        <span class="toggle-label">Finite Temperature Estimation</span>
       </div>
 
       <div id="temp-controls" class="temperature-controls">
@@ -616,20 +667,35 @@
 
       <input type="hidden" id="final-temp" name="temp" value="0">
 
-      <div class="form-group">
-        <label for="e_cut">Energy cutoff for unstable phases [eV/atom]:</label>
-        <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
-               value="0.2" required />
-        <small class="warn">0 = hide unstable phases</small>
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="functional">DFT Functional:</label>
+          <select id="functional" name="functional" required>
+            <option value="GGA_GGA_U_R2SCAN" selected>Mixed (Recommended)</option>
+            <option value="R2SCAN">R2SCAN only</option>
+            <option value="GGA_GGA_U">GGA/GGA+U only</option>
+          </select>
+        </div>
+        
+        <div class="form-group form-group-half">
+          <label for="e_cut">Energy cutoff [eV/atom]:</label>
+          <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
+                 value="0.2" required />
+        </div>
+      </div>
+      
+      <div class="info-compact">
+        <strong>Mixed:</strong> GGA/GGA+U/R2SCAN for best accuracy-speed balance<br>
+        <strong>Energy cutoff:</strong> 0 = hide unstable phases
       </div>
 
       <div class="form-group">
         <label for="api-key-input">Materials Project API Key:</label>
         <input id="api-key-input" type="password" name="api_key"
-               placeholder="32-character API key from materialsproject.org" autocomplete="off" required />
-        <p class="warn">API key is encrypted and stored securely in your browser (localStorage).</p>
-        <p class="info">📄 <a href="https://next-gen.materialsproject.org/api" target="_blank" rel="noopener noreferrer">Get your free API key here</a> (Materials Project registration required)</p>
-        <p class="info">⚠️ This tool is for research purposes. Always validate results and cite the Materials Project in publications.</p>
+               placeholder="32-character API key" autocomplete="off" required />
+        <div class="api-info">
+          🔒 Encrypted & stored in browser | 📄 <a href="https://next-gen.materialsproject.org/api" target="_blank">Get API key</a>
+        </div>
       </div>
 
       <button type="button" id="submit-btn">
@@ -674,6 +740,7 @@
       plotDiv: document.getElementById('plot'),
       formulasInput: document.getElementById('formulas'),
       eCutInput: document.getElementById('e_cut'),
+      functionalSelect: document.getElementById('functional'),
       submitBtn: document.getElementById('submit-btn')
     };
 
@@ -893,8 +960,8 @@
     }
 
     // 状態図生成関数
-    async function generatePhaseDiagram(formulas, temp, e_cut, api_key) {
-      console.log('Generating phase diagram with:', { formulas, temp, e_cut });
+    async function generatePhaseDiagram(formulas, temp, e_cut, functional, api_key) {
+      console.log('Generating phase diagram with:', { formulas, temp, e_cut, functional });
       
       try {
         setLoadingState(true);
@@ -929,7 +996,8 @@
         const requestData = {
           f: formulas,
           temp: tempNumber,
-          e_cut: eCutNumber
+          e_cut: eCutNumber,
+          functional: functional
         };
         
         console.log('🚀 Sending request to /diagram/raw');
@@ -1215,6 +1283,7 @@
       
       const temp = elements.finalTempInput.value;
       const e_cut = elements.eCutInput.value;
+      const functional = elements.functionalSelect.value;
       const api_key = elements.apiInput.value.trim();
       
       console.log('📋 Form data collected:');
@@ -1223,9 +1292,10 @@
       console.log('  🧪 Formulas count:', formulas.length);
       console.log('  🌡️ Temperature:', temp, '(type:', typeof temp, ')');
       console.log('  ⚡ E_cut:', e_cut, '(type:', typeof e_cut, ')');
+      console.log('  🔬 Functional:', functional, '(type:', typeof functional, ')');
       console.log('  🔑 API key length:', api_key.length);
 
-      await generatePhaseDiagram(formulas, temp, e_cut, api_key);
+      await generatePhaseDiagram(formulas, temp, e_cut, functional, api_key);
     });
 
     // フォーム送信を完全に阻止
@@ -1266,7 +1336,7 @@
 
     // ページ読み込み時に状態図生成が必要な場合
     {% if formulas %}
-    setTimeout(() => {
+    setTimeout(function() {
       console.log('Initial page load with formulas');
       elements.pdForm.dispatchEvent(new Event('submit'));
     }, 100);
