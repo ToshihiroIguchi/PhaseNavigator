@@ -98,6 +98,56 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - **Computation**: pymatgen for phase diagram calculations
 - **Containerization**: Docker with optimized Python 3.10 slim image
 
+### Computational Methodology
+
+#### Materials Project DFT Calculations
+Phase Navigator utilizes thermodynamic data from the Materials Project, which employs density functional theory (DFT) calculations using VASP (Vienna Ab Initio Simulation Package) v5.4.4:
+
+**Key DFT Parameters:**
+- **Exchange-Correlation Functional**: PBE GGA (Perdew-Burke-Ernzerhof Generalized Gradient Approximation)
+- **Pseudopotentials**: PAW PBE pseudopotentials
+- **Energy Cutoff**: 520 eV (1.3× highest recommended cutoff)
+- **K-point Sampling**: 1000/(atoms per cell) using Pymatgen
+- **Convergence Criteria**: Forces < 0.03 eV/Å
+- **Smearing**: Gaussian smearing with 0.01 eV width
+- **Magnetic Initialization**: High-spin (5 µB for d-block, 7 µB for f-block elements)
+- **Conditions**: 0 K and 0 atm for ground state calculations
+
+**Accuracy Considerations:**
+- Band gaps typically underestimated by ~40% (common GGA limitation)
+- GGA+U corrections applied for transition metal systems
+- Formation energy accuracy: R² = 0.987, RMSE = 0.175 eV/atom vs. experimental data
+
+#### Gibbs Free Energy Calculations
+When finite temperature (300-2000 K) is selected, the application uses Materials Project's Gibbs free energy corrections:
+
+**Thermodynamic Framework:**
+- **Gibbs Free Energy**: G(T,P,N) = H(T,P,N) - TS(T,P,N) = E(T,P,N) + PV(T,P,N) - TS(T,P,N)
+- **Formation Energy**: ΔGf(compound) = G(compound) - Σ μᵢNᵢ (where μᵢ is chemical potential)
+- **Energy Corrections**: Applied to 14 anion species including oxides, peroxides, and superoxides
+- **Mixing Schemes**: GGA/GGA+U energy corrections for improved accuracy across chemical systems
+
+**Temperature-Dependent Corrections:**
+- Vibrational contributions to entropy and enthalpy
+- Thermal expansion effects on volume
+- Electronic excitation contributions at high temperatures
+- Correction terms calibrated against experimental phase boundary data
+
+#### Phase Diagram Construction
+The phase diagram generation follows these computational steps:
+
+1. **Chemical System Query**: Retrieve all stable and metastable phases from Materials Project database
+2. **Energy Filtering**: Apply user-defined energy cutoff to include/exclude unstable phases
+3. **Convex Hull Construction**: Calculate thermodynamic stability using pymatgen's PhaseDiagram class
+4. **Temperature Correction**: Apply Gibbs free energy corrections if T > 0 K
+5. **Visualization**: Generate interactive Plotly.js phase diagrams with stability regions
+
+**Limitations:**
+- DFT calculations at 0 K/0 atm; finite temperature effects approximated
+- Accuracy depends on chemical system similarity
+- Configurational entropy of solid solutions not explicitly included
+- Dynamic effects and kinetic barriers not considered
+
 ### API Endpoints
 - `GET /` - Main application interface
 - `POST /diagram` - Form submission handler
