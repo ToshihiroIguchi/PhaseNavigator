@@ -241,24 +241,75 @@
 
     .temperature-controls {
       margin-top: 0.75rem;
-      padding: 1rem;
+      padding: 0.75rem;
       background: var(--primary-50);
       border-radius: var(--radius);
       border: 1px solid var(--primary-300);
       display: none;
     }
 
+    .temperature-unit-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      justify-content: center;
+    }
+
+    .temperature-input-container {
+      position: relative;
+    }
+
+    .temperature-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .temp-label-compact {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #000000;
+      margin: 0;
+    }
+
+    .temp-input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 80px;
+    }
+
+    .temp-unit {
+      font-weight: 600;
+      color: var(--primary-600);
+      min-width: 15px;
+      font-size: 0.75rem;
+    }
+
+    .temp-conversion-display {
+      margin-top: 0.25rem;
+      text-align: center;
+    }
+
+    #temp-conversion {
+      color: var(--gray-500);
+      font-style: italic;
+      font-size: 0.7rem;
+    }
+
     .slider-container {
       display: flex;
       align-items: center;
-      gap: 1rem;
-      margin-top: 0.75rem;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
     }
 
     #temp-slider {
       flex-grow: 1;
-      height: 8px;
-      border-radius: 4px;
+      height: 6px;
+      border-radius: 3px;
       background: var(--gray-200);
       outline: none;
       -webkit-appearance: none;
@@ -266,8 +317,8 @@
 
     #temp-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
       background: var(--primary-500);
       cursor: pointer;
@@ -281,9 +332,11 @@
     }
 
     #temp-input {
-      width: 100px;
+      width: 80px;
       text-align: center;
       color: #000000 !important;
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
     }
 
     button[type="button"] {
@@ -517,6 +570,12 @@
         gap: 0.5rem;
       }
       
+      .temperature-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
       #temp-input {
         width: 100%;
       }
@@ -656,12 +715,30 @@
       </div>
 
       <div id="temp-controls" class="temperature-controls">
-        <label for="temp">Temperature [K] (300–2000):</label>
-        <div class="slider-container">
-          <input type="range" id="temp-slider" name="temp_slider" 
-                 min="300" max="2000" step="10" value="300">
-          <input type="number" id="temp-input" name="temp_input" 
-                 min="300" max="2000" value="300">
+        <div class="temperature-header">
+          <label for="temp" id="temp-label" class="temp-label-compact">Temperature [K] (300–2000):</label>
+          <div class="temperature-unit-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="temp-unit-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label">°C | K</span>
+          </div>
+        </div>
+        
+        <div class="temperature-input-container">
+          <div class="slider-container">
+            <input type="range" id="temp-slider" name="temp_slider" 
+                   min="300" max="2000" step="10" value="300">
+            <div class="temp-input-group">
+              <input type="number" id="temp-input" name="temp_input" 
+                     min="300" max="2000" value="300">
+              <span class="temp-unit" id="temp-unit-display">K</span>
+            </div>
+          </div>
+          <div class="temp-conversion-display">
+            <small id="temp-conversion">27°C</small>
+          </div>
         </div>
       </div>
 
@@ -731,10 +808,14 @@
     // 要素取得
     const elements = {
       tempToggle: document.getElementById('temp-toggle'),
+      tempUnitToggle: document.getElementById('temp-unit-toggle'),
       tempControls: document.getElementById('temp-controls'),
+      tempLabel: document.getElementById('temp-label'),
       finalTempInput: document.getElementById('final-temp'),
       tempSlider: document.getElementById('temp-slider'),
       tempInput: document.getElementById('temp-input'),
+      tempUnitDisplay: document.getElementById('temp-unit-display'),
+      tempConversion: document.getElementById('temp-conversion'),
       apiInput: document.getElementById('api-key-input'),
       pdForm: document.getElementById('pd-form'),
       plotDiv: document.getElementById('plot'),
@@ -745,11 +826,117 @@
     };
 
     // 要素存在確認
+    console.log('🔍 Element check:');
     for (const [key, element] of Object.entries(elements)) {
       if (!element) {
-        console.error(`Element not found: ${key}`);
+        console.error(`❌ Element not found: ${key}`);
         return;
+      } else {
+        console.log(`✅ ${key}: found`);
       }
+    }
+
+    // 温度変換関数
+    function kelvinToCelsius(k) {
+      return k - 273.15;
+    }
+    
+    function celsiusToKelvin(c) {
+      return c + 273.15;
+    }
+    
+    // 温度単位切り替え処理
+    function toggleTemperatureUnit() {
+      const isKelvin = !elements.tempUnitToggle.checked; // false = Celsius
+      console.log('🌡️ Temperature unit toggle triggered!');
+      console.log('  Toggle checked:', elements.tempUnitToggle.checked);
+      console.log('  Is Kelvin:', isKelvin);
+      console.log('  Current value:', elements.tempInput.value);
+      
+      updateTemperatureInputs(isKelvin);
+      updateTemperatureDisplay(isKelvin);
+      updateTemperatureConversion();
+      
+      console.log('  New value:', elements.tempInput.value);
+      console.log('  New unit:', elements.tempUnitDisplay.textContent);
+    }
+    
+    // 温度入力更新
+    function updateTemperatureInputs(isKelvin) {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      console.log('📊 updateTemperatureInputs called');
+      console.log('  isKelvin:', isKelvin);
+      console.log('  currentValue:', currentValue);
+      
+      if (isKelvin) {
+        // 現在Celsiusモードで、Kelvinに切り替える場合
+        if (elements.tempUnitToggle.checked) {
+          // Celsius → Kelvin conversion
+          const kelvinValue = celsiusToKelvin(currentValue);
+          console.log('  Converting C to K:', currentValue, '→', kelvinValue);
+          elements.tempSlider.value = Math.round(Math.min(2000, Math.max(300, kelvinValue)));
+          elements.tempInput.value = Math.round(Math.min(2000, Math.max(300, kelvinValue)));
+        }
+        
+        // Set Kelvin ranges
+        elements.tempSlider.min = 300;
+        elements.tempSlider.max = 2000;
+        elements.tempInput.min = 300;
+        elements.tempInput.max = 2000;
+        elements.tempSlider.step = 10;
+        elements.tempInput.step = 1;
+      } else {
+        // 現在Kelvinモードで、Celsiusに切り替える場合
+        if (!elements.tempUnitToggle.checked) {
+          // Kelvin → Celsius conversion
+          const celsiusValue = kelvinToCelsius(currentValue);
+          console.log('  Converting K to C:', currentValue, '→', celsiusValue);
+          elements.tempSlider.value = Math.round(Math.min(1727, Math.max(27, celsiusValue)));
+          elements.tempInput.value = Math.round(Math.min(1727, Math.max(27, celsiusValue)));
+        }
+        
+        // Set Celsius ranges
+        elements.tempSlider.min = 27;
+        elements.tempSlider.max = 1727;
+        elements.tempInput.min = 27;
+        elements.tempInput.max = 1727;
+        elements.tempSlider.step = 5;
+        elements.tempInput.step = 1;
+      }
+      
+      console.log('  Final value:', elements.tempInput.value);
+    }
+    
+    // 温度表示更新
+    function updateTemperatureDisplay(isKelvin) {
+      if (isKelvin) {
+        elements.tempLabel.textContent = 'Temperature [K] (300–2000):';
+        elements.tempUnitDisplay.textContent = 'K';
+      } else {
+        elements.tempLabel.textContent = 'Temperature [°C] (27–1727):';
+        elements.tempUnitDisplay.textContent = '°C';
+      }
+    }
+    
+    // 変換値表示更新
+    function updateTemperatureConversion() {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      const isKelvin = !elements.tempUnitToggle.checked;
+      
+      if (isKelvin) {
+        const celsiusValue = Math.round(kelvinToCelsius(currentValue));
+        elements.tempConversion.textContent = `${celsiusValue}°C`;
+      } else {
+        const kelvinValue = Math.round(celsiusToKelvin(currentValue));
+        elements.tempConversion.textContent = `${kelvinValue}K`;
+      }
+    }
+    
+    // Kelvin値取得（API送信用）
+    function getKelvinValue() {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      const isKelvin = !elements.tempUnitToggle.checked;
+      return isKelvin ? currentValue : Math.round(celsiusToKelvin(currentValue));
     }
 
     // Simple encryption/decryption functions - using hex encoding for reliability
@@ -841,8 +1028,11 @@
       console.log('Initializing temperature controls');
       elements.tempControls.style.display = 'none';
       elements.finalTempInput.value = '0';
+      elements.tempUnitToggle.checked = false; // デフォルトはKelvin
       elements.tempSlider.value = '300';
       elements.tempInput.value = '300';
+      updateTemperatureDisplay(true); // Kelvin表示
+      updateTemperatureConversion();
       updateDiagramDisplay();
     }
 
@@ -868,22 +1058,36 @@
       const value = elements.tempSlider.value;
       elements.tempInput.value = value;
       if (elements.tempToggle.checked) {
-        elements.finalTempInput.value = value;
+        elements.finalTempInput.value = getKelvinValue();
       }
+      updateTemperatureConversion();
       console.log('Synced temperature values:', value);
       updateDiagramDisplay();
     }
 
     // 入力値の検証
     function validateTemperatureInput() {
+      const isKelvin = !elements.tempUnitToggle.checked;
       let value = elements.tempInput.value;
-      if (value === '') value = '300';
-      value = Math.min(2000, Math.max(300, parseInt(value, 10) || 300));
+      
+      if (value === '') {
+        value = isKelvin ? '300' : '27';
+      }
+      
+      if (isKelvin) {
+        value = Math.min(2000, Math.max(300, parseInt(value, 10) || 300));
+      } else {
+        value = Math.min(1727, Math.max(27, parseInt(value, 10) || 27));
+      }
+      
       elements.tempInput.value = value;
       elements.tempSlider.value = value;
+      
       if (elements.tempToggle.checked) {
-        elements.finalTempInput.value = value;
+        elements.finalTempInput.value = getKelvinValue();
       }
+      
+      updateTemperatureConversion();
       console.log('Validated temperature:', value);
       updateDiagramDisplay();
     }
@@ -1124,7 +1328,14 @@
           plotData.layout.annotations = plotData.layout.annotations || [];
           
           // Temperature annotation (top margin area, outside plot)
-          const tempText = temp !== '0' ? `T = ${temp} K` : 'T = 0 K';
+          let tempText;
+          if (temp !== '0') {
+            const kelvinTemp = parseInt(temp);
+            const celsiusTemp = Math.round(kelvinToCelsius(kelvinTemp));
+            tempText = `T = ${kelvinTemp} K (${celsiusTemp}°C)`;
+          } else {
+            tempText = 'T = 0 K (-273°C)';
+          }
           plotData.layout.annotations.push({
             x: 0.02,
             y: 1.05,
@@ -1281,7 +1492,7 @@
         .map(f => f.trim())
         .filter(f => f && f.length > 0 && f !== '');
       
-      const temp = elements.finalTempInput.value;
+      const temp = elements.tempToggle.checked ? getKelvinValue() : '0';
       const e_cut = elements.eCutInput.value;
       const functional = elements.functionalSelect.value;
       const api_key = elements.apiInput.value.trim();
@@ -1307,11 +1518,20 @@
     });
 
     // イベントリスナー設定
+    console.log('🔧 Setting up event listeners...');
     elements.tempToggle.addEventListener('change', updateTemperatureControls);
+    console.log('✅ tempToggle event listener added');
+    
+    elements.tempUnitToggle.addEventListener('change', toggleTemperatureUnit);
+    console.log('✅ tempUnitToggle event listener added');
+    console.log('  tempUnitToggle element:', elements.tempUnitToggle);
+    console.log('  tempUnitToggle checked:', elements.tempUnitToggle.checked);
+    
     elements.tempSlider.addEventListener('input', syncTemperatureValues);
     elements.tempInput.addEventListener('input', validateTemperatureInput);
     elements.formulasInput.addEventListener('input', handleFormInputChange);
     elements.eCutInput.addEventListener('input', handleFormInputChange);
+    console.log('✅ All event listeners set up');
 
     // 初期化実行
     initTemperatureControls();
