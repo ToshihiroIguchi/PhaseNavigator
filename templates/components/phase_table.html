@@ -1,0 +1,28 @@
+<!-- Phase Information Table -->
+<div id="phase-info" class="phase-info-container">
+  <div class="phase-info-header">
+    <span>📊</span>
+    <span>Phase Information</span>
+    <span id="phase-count"></span>
+  </div>
+  <div class="phase-info-content">
+    <div id="phase-summary" class="phase-summary"></div>
+    <div style="overflow-x: auto;">
+      <table id="phase-table" class="phase-table">
+        <thead>
+          <tr>
+            <th>Formula</th>
+            <th>Composition</th>
+            <th>Formation Energy<br><small>(eV/atom)</small></th>
+            <th>Total Energy<br><small>(eV/atom)</small></th>
+            <th>Correction<br><small>(eV)</small><span class="info-icon" title="Energy correction for DFT systematic errors. Zero indicates no correction applied (reference state or correction not needed)">ⓘ</span></th>
+            <th>MP ID<br><small>(Click to view details)</small></th>
+          </tr>
+        </thead>
+        <tbody id="phase-table-body">
+          <!-- Phase data will be inserted here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

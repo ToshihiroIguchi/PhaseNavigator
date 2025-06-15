@@ -1,0 +1,117 @@
+<!-- Control Panel -->
+<div id="controls">
+  <header>
+    <img src="/static/logo.png" alt="Phase Navigator Logo" />
+    <h1>Phase Navigator</h1>
+  </header>
+
+  <div class="info-compact">
+    Generate solid phase diagrams using Materials Project data. <strong>Note:</strong> Only solid phases are calculated (liquids and gases are not included).
+  </div>
+
+  <!-- Chemical Formulas -->
+  <div class="form-group">
+    <label for="formulas">Chemical Formulas</label>
+    <input 
+      type="text" 
+      id="formulas" 
+      name="formulas" 
+      placeholder="Fe2O3, Al2O3, SiO2" 
+      value="{{ formulas or '' }}"
+      autocomplete="off"
+    />
+    <small class="warn">Enter 2-4 formulas separated by commas</small>
+  </div>
+
+  <!-- Materials Project API Key -->
+  <div class="form-group">
+    <label for="api-key">Materials Project API Key</label>
+    <input 
+      type="password" 
+      id="api-key" 
+      name="api-key" 
+      placeholder="Your API key"
+      autocomplete="off"
+    />
+    <div class="api-info">
+      Get your free API key from 
+      <a href="https://materialsproject.org/api" target="_blank">Materials Project</a>
+    </div>
+  </div>
+
+  <!-- Temperature Controls -->
+  <div class="toggle-container">
+    <label class="toggle-switch">
+      <input type="checkbox" id="temp-toggle">
+      <span class="slider"></span>
+    </label>
+    <span class="toggle-label">Enable Temperature (Gibbs Free Energy)</span>
+  </div>
+
+  <div class="temperature-controls-compact" id="temp-controls">
+    <div class="temp-control-row">
+      <div class="temp-unit-toggle">
+        <span class="unit-label kelvin">K</span>
+        <label class="toggle-switch mini">
+          <input type="checkbox" id="temp-unit-toggle">
+          <span class="slider"></span>
+        </label>
+        <span class="unit-label celsius">°C</span>
+      </div>
+      <div class="temp-input-group">
+        <input type="number" id="temp-input" min="300" max="2000" step="10" value="300">
+        <span class="temp-unit">K</span>
+      </div>
+    </div>
+    <div class="temp-slider-row">
+      <input type="range" id="temp-slider" min="300" max="2000" step="10" value="300">
+      <small id="temp-conversion">= 27°C</small>
+    </div>
+  </div>
+
+  <!-- Advanced Settings -->
+  <div class="form-row">
+    <div class="form-group-half">
+      <label for="e-cut">Energy Cutoff (eV/atom)</label>
+      <input 
+        type="number" 
+        id="e-cut" 
+        name="e_cut" 
+        step="0.1" 
+        min="0" 
+        max="2" 
+        value="{{ e_cut or 0.2 }}"
+      />
+    </div>
+    <div class="form-group-half">
+      <label for="functional">DFT Functional</label>
+      <select id="functional" name="functional">
+        <option value="GGA_GGA_U_R2SCAN" {% if functional == "GGA_GGA_U_R2SCAN" %}selected{% endif %}>
+          GGA/GGA+U/R2SCAN
+        </option>
+        <option value="R2SCAN" {% if functional == "R2SCAN" %}selected{% endif %}>
+          R2SCAN
+        </option>
+        <option value="GGA_GGA_U" {% if functional == "GGA_GGA_U" %}selected{% endif %}>
+          GGA/GGA+U
+        </option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Hidden input for final temperature value -->
+  <input type="hidden" id="temp" name="temp" value="{{ temp or 0 }}">
+
+  <!-- Submit Button -->
+  <button type="button" id="submit-btn">
+    <span id="submit-text">Generate Phase Diagram</span>
+    <div id="submit-loading" style="display: none;">
+      <div class="loading-spinner"></div>
+      <span>Generating...</span>
+    </div>
+  </button>
+
+  <div class="info">
+    <strong>Note:</strong> Diagram generation may take 10-30 seconds depending on system complexity.
+  </div>
+</div>

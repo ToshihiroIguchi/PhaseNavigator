@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Phase Navigator</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    :root {
+      --primary-50: #eff6ff;
+      --primary-100: #dbeafe;
+      --primary-200: #bfdbfe;
+      --primary-300: #93c5fd;
+      --primary-500: #3b82f6;
+      --primary-600: #2563eb;
+      --primary-700: #1d4ed8;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+      --green-500: #10b981;
+      --amber-500: #f59e0b;
+      --red-500: #ef4444;
+      --control-width: 420px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', sans-serif; 
+      background: #ffffff;
+      color: #000000;
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 1.5rem 1rem;
+    }
+
+    #main-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    #controls {
+      flex: 0 0 var(--control-width);
+      background: var(--gray-50);
+      border: 1px solid var(--gray-300);
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    #output {
+      flex: 1 1 700px;
+      min-width: 500px;
+    }
+
+    header { 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    
+    header img { 
+      height: 44px; 
+      margin-right: 0.75rem;
+      filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.1));
+    }
+    
+    h1 { 
+      font-size: 1.75rem; 
+      font-weight: 700;
+      margin: 0;
+      color: #000000;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-row {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .form-group-half {
+      flex: 1;
+      margin-bottom: 0;
+    }
+    
+    .info-compact {
+      background: var(--primary-50);
+      border: 1px solid var(--primary-200);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-size: 0.75rem;
+      color: var(--gray-700);
+      margin-bottom: 1rem;
+      line-height: 1.4;
+    }
+    
+    .api-info {
+      font-size: 0.75rem;
+      color: var(--gray-600);
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--gray-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-200);
+    }
+    
+    .api-info a {
+      color: var(--primary-600);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .api-info a:hover {
+      color: var(--primary-700);
+      text-decoration: underline;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #000000;
+      font-size: 0.875rem;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--gray-400);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      background: #ffffff;
+      transition: all 0.2s ease;
+      color: #000000 !important;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary-500);
+      background: #ffffff;
+      box-shadow: 0 0 0 3px var(--primary-200);
+      transform: translateY(-1px);
+    }
+
+    input:hover:not(:focus) {
+      border-color: var(--gray-500);
+      background: #ffffff;
+    }
+
+    input::placeholder {
+      color: var(--gray-500) !important;
+      opacity: 1;
+    }
+
+    .toggle-container {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      background: #ffffff;
+      border-radius: var(--radius);
+      border: 1px solid var(--gray-300);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 52px;
+      height: 28px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--gray-300);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 28px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
+    }
+
+    input:checked + .slider {
+      background: var(--primary-500);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .toggle-label {
+      font-weight: 600;
+      color: #000000;
+      font-size: 0.875rem;
+    }
+
+    .temperature-controls {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: var(--primary-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--primary-300);
+      display: none;
+    }
+
+    .temperature-unit-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      justify-content: center;
+    }
+
+    .temperature-input-container {
+      position: relative;
+    }
+
+    .temperature-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .temp-label-compact {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #000000;
+      margin: 0;
+    }
+
+    .temp-input-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 80px;
+    }
+
+    .temp-unit {
+      font-weight: 600;
+      color: var(--primary-600);
+      min-width: 15px;
+      font-size: 0.75rem;
+    }
+
+    .temp-conversion-display {
+      margin-top: 0.25rem;
+      text-align: center;
+    }
+
+    #temp-conversion {
+      color: var(--gray-500);
+      font-style: italic;
+      font-size: 0.7rem;
+    }
+
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    #temp-slider {
+      flex-grow: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--gray-200);
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    #temp-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-500);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgb(0 0 0 / 0.2);
+      transition: all 0.2s ease;
+    }
+
+    #temp-slider::-webkit-slider-thumb:hover {
+      background: var(--primary-600);
+      transform: scale(1.1);
+    }
+
+    #temp-input {
+      width: 80px;
+      text-align: center;
+      color: #000000 !important;
+      font-size: 0.875rem;
+      padding: 0.5rem 0.75rem;
+    }
+
+    button[type="button"] {
+      background: var(--primary-600);
+      color: white;
+      border: none;
+      padding: 0.875rem 1.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+      margin-top: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    button[type="button"]:hover {
+      background: var(--primary-700);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    button[type="button"]:active {
+      transform: translateY(0);
+    }
+
+    .warn {
+      color: #dc2626;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: #fef2f2;
+      border-radius: var(--radius);
+      border: 1px solid #fecaca;
+    }
+
+    .info {
+      color: #1d4ed8;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--primary-50);
+      border-radius: var(--radius);
+      border: 1px solid var(--primary-200);
+    }
+
+    .info a {
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .info a:hover {
+      color: #2563eb;
+      text-decoration: underline;
+    }
+
+    small.warn {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #666666;
+      font-size: 0.75rem;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #333333;
+      padding: 2rem;
+    }
+
+    .loading-spinner {
+      border: 3px solid var(--gray-200);
+      border-top: 3px solid var(--primary-500);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin-right: 0.75rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      color: var(--red-500);
+      font-weight: 500;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .success-message {
+      background: rgba(16, 185, 129, 0.1);
+      border: 2px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      margin: 1rem 0;
+      color: var(--green-500);
+      font-weight: 500;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .diagram-info {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: #666;
+      flex-wrap: wrap;
+    }
+
+    .diagram-info span {
+      background: #f0f0f0;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    #diagram-header {
+      margin-bottom: 1rem;
+    }
+
+    .progress-steps {
+      margin: 1rem 0;
+      padding: 1rem;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border: 1px solid #e9ecef;
+    }
+
+    .progress-step {
+      display: flex;
+      align-items: center;
+      margin: 0.5rem 0;
+      font-size: 0.9rem;
+    }
+
+    .progress-step.active {
+      color: var(--primary-600);
+      font-weight: 500;
+    }
+
+    .progress-step.completed {
+      color: #28a745;
+    }
+
+    .progress-step-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+    }
+
+    .progress-step.active .progress-step-icon {
+      background: var(--primary-600);
+      color: white;
+    }
+
+    .progress-step.completed .progress-step-icon {
+      background: #28a745;
+      color: white;
+    }
+
+    .progress-step.pending .progress-step-icon {
+      background: #e9ecef;
+      color: #6c757d;
+    }
+
+    #plot {
+      width: 100%;
+      height: 70vh;
+      margin-top: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    /* Phase Information Table Styles */
+    .phase-info-container {
+      margin-top: 2rem;
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-300);
+      overflow: hidden;
+      display: none;
+    }
+
+    .phase-info-header {
+      background: var(--primary-600);
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .phase-info-content {
+      padding: 1.5rem;
+    }
+
+    .phase-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .phase-table th {
+      background: var(--primary-50);
+      color: var(--primary-700);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--primary-200);
+      font-size: 0.875rem;
+    }
+
+    .phase-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 0.875rem;
+      vertical-align: middle;
+    }
+
+    .phase-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .phase-table tr:hover {
+      background: var(--primary-50);
+    }
+
+    .formula-cell {
+      font-weight: 600;
+      color: var(--primary-700);
+    }
+
+    .energy-cell {
+      font-family: 'Courier New', monospace;
+      text-align: right;
+    }
+
+    .entry-id-cell {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      font-family: 'Courier New', monospace;
+    }
+
+    .entry-id-cell a {
+      color: var(--primary-600);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .entry-id-cell a:hover {
+      color: var(--primary-700);
+      text-decoration: underline;
+    }
+
+    .entry-id-cell a:visited {
+      color: var(--primary-500);
+    }
+
+    .phase-summary {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--primary-50);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      color: var(--primary-700);
+    }
+
+    .energy-positive {
+      color: var(--red-500);
+    }
+
+    .energy-negative {
+      color: var(--green-500);
+    }
+
+    .energy-zero {
+      color: var(--gray-600);
+    }
+
+    .info-icon {
+      color: var(--primary-500);
+      font-size: 0.8rem;
+      margin-left: 0.25rem;
+      cursor: help;
+      user-select: none;
+    }
+
+    .info-icon:hover {
+      color: var(--primary-700);
+    }
+
+    @media (max-width: 768px) {
+      body {
+        margin: 1rem;
+      }
+      
+      #main-container {
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      
+      #controls {
+        width: 100%;
+        padding: 1rem;
+      }
+      
+      #output {
+        width: 100%;
+      }
+      
+      #plot {
+        height: 50vh;
+      }
+      
+      .form-row {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      
+      .slider-container {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      
+      .temperature-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      #temp-input {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        margin: 0.5rem;
+      }
+      
+      h1 {
+        font-size: 1.4rem;
+      }
+      
+      header img {
+        height: 36px;
+      }
+      
+      #controls {
+        padding: 0.8rem;
+      }
+      
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      
+      button[type="submit"] {
+        padding: 0.8rem 1rem;
+        font-size: 0.9rem;
+      }
+    }
+    /* Modern scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--gray-100);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--gray-300);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--gray-400);
+    }
+
+    /* Enhanced animations */
+    #controls {
+      animation: fadeIn 0.6s ease;
+    }
+
+    .form-group {
+      animation: fadeIn 0.6s ease;
+      animation-fill-mode: both;
+    }
+
+    .form-group:nth-child(1) { animation-delay: 0.1s; }
+    .form-group:nth-child(2) { animation-delay: 0.2s; }
+    .form-group:nth-child(3) { animation-delay: 0.3s; }
+    .form-group:nth-child(4) { animation-delay: 0.4s; }
+    .form-group:nth-child(5) { animation-delay: 0.5s; }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem 0.5rem;
+      }
+
+      #main-container {
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      #controls {
+        flex: none;
+        width: 100%;
+        padding: 1.25rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      header {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+      }
+
+      header img {
+        margin: 0;
+      }
+
+      .slider-container {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      #temp-input {
+        width: 100%;
+      }
+    }
+
+    /* Dark mode support disabled for white background design */
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="/static/logo.png" alt="logo">
+  <h1>Phase Navigator <small>(solid phases)</small></h1>
+</header>
+
+<div id="main-container">
+
+  <div id="controls">
+    <form id="pd-form">
+
+      <div class="form-group">
+        <label for="formulas">Comma-separated formulas (2–4):</label>
+        <input id="formulas" name="formulas" type="text"
+               placeholder="e.g. BaO, MgO, SiO2"
+               value="{{ formulas if formulas else '' }}"
+               required />
+      </div>
+
+      <div class="toggle-container">
+        <label class="toggle-switch">
+          <input type="checkbox" id="temp-toggle" name="temp_toggle">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Finite Temperature Estimation</span>
+      </div>
+
+      <div id="temp-controls" class="temperature-controls">
+        <div class="temperature-header">
+          <label for="temp" id="temp-label" class="temp-label-compact">Temperature [K] (300–2000):</label>
+          <div class="temperature-unit-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="temp-unit-toggle">
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label">°C | K</span>
+          </div>
+        </div>
+        
+        <div class="temperature-input-container">
+          <div class="slider-container">
+            <input type="range" id="temp-slider" name="temp_slider" 
+                   min="300" max="2000" step="10" value="300">
+            <div class="temp-input-group">
+              <input type="number" id="temp-input" name="temp_input" 
+                     min="300" max="2000" value="300">
+              <span class="temp-unit" id="temp-unit-display">K</span>
+            </div>
+          </div>
+          <div class="temp-conversion-display">
+            <small id="temp-conversion">27°C</small>
+          </div>
+        </div>
+      </div>
+
+      <input type="hidden" id="final-temp" name="temp" value="0">
+
+      <div class="form-row">
+        <div class="form-group form-group-half">
+          <label for="functional">DFT Functional:</label>
+          <select id="functional" name="functional" required>
+            <option value="GGA_GGA_U_R2SCAN" selected>Combined Data (Recommended)</option>
+            <option value="R2SCAN">R2SCAN only</option>
+            <option value="GGA_GGA_U">GGA/GGA+U only</option>
+          </select>
+        </div>
+        
+        <div class="form-group form-group-half">
+          <label for="e_cut">Energy cutoff [eV/atom]:</label>
+          <input id="e_cut" type="number" name="e_cut" min="0" step="0.01"
+                 value="0.2" required />
+        </div>
+      </div>
+      
+      <div class="info-compact">
+        <strong>Combined Data:</strong> Uses GGA/GGA+U and R2SCAN data from Materials Project<br>
+        <strong>Energy cutoff:</strong> 0 = hide unstable phases
+      </div>
+
+      <div class="form-group">
+        <label for="api-key-input">Materials Project API Key:</label>
+        <input id="api-key-input" type="password" name="api_key"
+               placeholder="32-character API key" autocomplete="off" required />
+        <div class="api-info">
+          🔒 Encrypted & stored in browser | 📄 <a href="https://next-gen.materialsproject.org/api" target="_blank">Get API key</a>
+        </div>
+      </div>
+
+      <button type="button" id="submit-btn">
+        <span id="submit-text">Generate Phase Diagram</span>
+        <span id="submit-loading" style="display: none;">
+          <div class="loading-spinner"></div>
+          Generating...
+        </span>
+      </button>
+    </form>
+  </div>
+
+  <div id="output">
+    <div id="plot"></div>
+    
+    <div id="phase-info" class="phase-info-container">
+      <div class="phase-info-header">
+        <span>📊</span>
+        <span>Phase Information</span>
+        <span id="phase-count"></span>
+      </div>
+      <div class="phase-info-content">
+        <div id="phase-summary" class="phase-summary"></div>
+        <div style="overflow-x: auto;">
+          <table id="phase-table" class="phase-table">
+            <thead>
+              <tr>
+                <th>Formula</th>
+                <th>Composition</th>
+                <th>Formation Energy<br><small>(eV/atom)</small></th>
+                <th>Total Energy<br><small>(eV/atom)</small></th>
+                <th>Correction<br><small>(eV)</small><span class="info-icon" title="Energy correction for DFT systematic errors. Zero indicates no correction applied (reference state or correction not needed)">ⓘ</span></th>
+                <th>MP ID<br><small>(Click to view details)</small></th>
+              </tr>
+            </thead>
+            <tbody id="phase-table-body">
+              <!-- Phase data will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded and parsed');
+    console.log('🌐 Page URL:', window.location.href);
+    console.log('💾 localStorage available:', typeof Storage !== 'undefined');
+    console.log('🔑 Stored key exists:', !!localStorage.getItem('mp_api_key_encrypted'));
+    
+    // 既存のlocalStorageキーをすべて確認
+    console.log('📦 All localStorage keys:');
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      console.log(`  ${key}: ${localStorage.getItem(key) ? 'exists' : 'null'}`);
+    }
+
+    // 要素取得
+    const elements = {
+      tempToggle: document.getElementById('temp-toggle'),
+      tempUnitToggle: document.getElementById('temp-unit-toggle'),
+      tempControls: document.getElementById('temp-controls'),
+      tempLabel: document.getElementById('temp-label'),
+      finalTempInput: document.getElementById('final-temp'),
+      tempSlider: document.getElementById('temp-slider'),
+      tempInput: document.getElementById('temp-input'),
+      tempUnitDisplay: document.getElementById('temp-unit-display'),
+      tempConversion: document.getElementById('temp-conversion'),
+      apiInput: document.getElementById('api-key-input'),
+      pdForm: document.getElementById('pd-form'),
+      plotDiv: document.getElementById('plot'),
+      formulasInput: document.getElementById('formulas'),
+      eCutInput: document.getElementById('e_cut'),
+      functionalSelect: document.getElementById('functional'),
+      submitBtn: document.getElementById('submit-btn')
+    };
+
+    // 要素存在確認
+    console.log('🔍 Element check:');
+    for (const [key, element] of Object.entries(elements)) {
+      if (!element) {
+        console.error(`❌ Element not found: ${key}`);
+        return;
+      } else {
+        console.log(`✅ ${key}: found`);
+      }
+    }
+
+    // 温度変換関数
+    function kelvinToCelsius(k) {
+      return k - 273.15;
+    }
+    
+    function celsiusToKelvin(c) {
+      return c + 273.15;
+    }
+    
+    // 温度単位切り替え処理
+    function toggleTemperatureUnit() {
+      const isKelvin = !elements.tempUnitToggle.checked; // false = Celsius
+      console.log('🌡️ Temperature unit toggle triggered!');
+      console.log('  Toggle checked:', elements.tempUnitToggle.checked);
+      console.log('  Is Kelvin:', isKelvin);
+      console.log('  Current value:', elements.tempInput.value);
+      
+      updateTemperatureInputs(isKelvin);
+      updateTemperatureDisplay(isKelvin);
+      updateTemperatureConversion();
+      
+      console.log('  New value:', elements.tempInput.value);
+      console.log('  New unit:', elements.tempUnitDisplay.textContent);
+    }
+    
+    // 温度入力更新
+    function updateTemperatureInputs(isKelvin) {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      console.log('📊 updateTemperatureInputs called');
+      console.log('  isKelvin:', isKelvin);
+      console.log('  currentValue:', currentValue);
+      
+      if (isKelvin) {
+        // 現在Celsiusモードで、Kelvinに切り替える場合
+        if (elements.tempUnitToggle.checked) {
+          // Celsius → Kelvin conversion
+          const kelvinValue = celsiusToKelvin(currentValue);
+          console.log('  Converting C to K:', currentValue, '→', kelvinValue);
+          elements.tempSlider.value = Math.round(Math.min(2000, Math.max(300, kelvinValue)));
+          elements.tempInput.value = Math.round(Math.min(2000, Math.max(300, kelvinValue)));
+        }
+        
+        // Set Kelvin ranges
+        elements.tempSlider.min = 300;
+        elements.tempSlider.max = 2000;
+        elements.tempInput.min = 300;
+        elements.tempInput.max = 2000;
+        elements.tempSlider.step = 10;
+        elements.tempInput.step = 1;
+      } else {
+        // 現在Kelvinモードで、Celsiusに切り替える場合
+        if (!elements.tempUnitToggle.checked) {
+          // Kelvin → Celsius conversion
+          const celsiusValue = kelvinToCelsius(currentValue);
+          console.log('  Converting K to C:', currentValue, '→', celsiusValue);
+          elements.tempSlider.value = Math.round(Math.min(1727, Math.max(27, celsiusValue)));
+          elements.tempInput.value = Math.round(Math.min(1727, Math.max(27, celsiusValue)));
+        }
+        
+        // Set Celsius ranges
+        elements.tempSlider.min = 27;
+        elements.tempSlider.max = 1727;
+        elements.tempInput.min = 27;
+        elements.tempInput.max = 1727;
+        elements.tempSlider.step = 5;
+        elements.tempInput.step = 1;
+      }
+      
+      console.log('  Final value:', elements.tempInput.value);
+    }
+    
+    // 温度表示更新
+    function updateTemperatureDisplay(isKelvin) {
+      if (isKelvin) {
+        elements.tempLabel.textContent = 'Temperature [K] (300–2000):';
+        elements.tempUnitDisplay.textContent = 'K';
+      } else {
+        elements.tempLabel.textContent = 'Temperature [°C] (27–1727):';
+        elements.tempUnitDisplay.textContent = '°C';
+      }
+    }
+    
+    // 変換値表示更新
+    function updateTemperatureConversion() {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      const isKelvin = !elements.tempUnitToggle.checked;
+      
+      if (isKelvin) {
+        const celsiusValue = Math.round(kelvinToCelsius(currentValue));
+        elements.tempConversion.textContent = `${celsiusValue}°C`;
+      } else {
+        const kelvinValue = Math.round(celsiusToKelvin(currentValue));
+        elements.tempConversion.textContent = `${kelvinValue}K`;
+      }
+    }
+    
+    // Kelvin値取得（API送信用）
+    function getKelvinValue() {
+      const currentValue = parseFloat(elements.tempInput.value) || 300;
+      const isKelvin = !elements.tempUnitToggle.checked;
+      return isKelvin ? currentValue : Math.round(celsiusToKelvin(currentValue));
+    }
+
+    // 相情報表示関数
+    function displayPhaseInformation(phaseInfo, metadata) {
+      console.log('📊 Displaying phase information:', phaseInfo);
+      
+      const phaseInfoContainer = document.getElementById('phase-info');
+      const phaseCount = document.getElementById('phase-count');
+      const phaseSummary = document.getElementById('phase-summary');
+      const phaseTableBody = document.getElementById('phase-table-body');
+      
+      // Show the container
+      phaseInfoContainer.style.display = 'block';
+      
+      // Update header
+      phaseCount.textContent = `(${phaseInfo.length} phases)`;
+      
+      // Update summary
+      const temp = metadata.temperature || 0;
+      const tempText = temp === 0 ? '0 K' : `${temp} K (${Math.round(kelvinToCelsius(temp))}°C)`;
+      // Check if any phases have non-zero corrections
+      const hasCorrections = phaseInfo.some(phase => phase.correction !== 0);
+      const correctionNote = hasCorrections ? 
+        'Some phases include DFT energy corrections.' : 
+        'No energy corrections applied (all phases are reference states).';
+      
+      phaseSummary.innerHTML = `
+        <strong>Calculation Details:</strong> 
+        Temperature = ${tempText}, 
+        Functional = ${metadata.functional || 'Unknown'}, 
+        Energy cutoff = ${metadata.e_cut || 0} eV/atom<br>
+        <strong>Energy Corrections:</strong> ${correctionNote}
+      `;
+      
+      // Clear existing table rows
+      phaseTableBody.innerHTML = '';
+      
+      // Populate table
+      phaseInfo.forEach((phase, index) => {
+        const row = document.createElement('tr');
+        
+        // Formation energy color coding
+        let formationEnergyClass = 'energy-zero';
+        if (phase.formation_energy_per_atom !== null) {
+          if (phase.formation_energy_per_atom > 0) {
+            formationEnergyClass = 'energy-positive';
+          } else if (phase.formation_energy_per_atom < 0) {
+            formationEnergyClass = 'energy-negative';
+          }
+        }
+        
+        // Format MP ID with link if it's a valid Materials Project ID
+        let mpIdHtml = phase.entry_id;
+        if (phase.entry_id && phase.entry_id !== 'Unknown' && 
+            (phase.entry_id.startsWith('mp-') || phase.entry_id.startsWith('mvc-'))) {
+          
+          // Clean MP ID by removing functional suffixes (e.g., -r2SCAN, -GGA+U)
+          const cleanMpId = phase.entry_id.replace(/-r2SCAN|-GGA\+U|-scan|-pbe|-hsesol/gi, '');
+          
+          // Extract functional suffix for display
+          const functionalSuffix = phase.entry_id.replace(cleanMpId, '');
+          
+          // Display with functional info and link to clean ID
+          mpIdHtml = `<a href="https://materialsproject.org/materials/${cleanMpId}/" target="_blank" rel="noopener noreferrer" title="View ${cleanMpId} on Materials Project (computed with ${functionalSuffix.replace('-', '') || 'standard functional'})">${cleanMpId}<span style="color: var(--gray-400); font-size: 0.8em;">${functionalSuffix}</span></a>`;
+        }
+        
+        // Add tooltip for correction explanation
+        const correctionHtml = phase.correction !== 0 ? 
+          `<span title="Energy correction for DFT systematic errors">${phase.correction.toFixed(4)}</span>` : 
+          `<span title="No energy correction applied (reference state or correction not needed)">${phase.correction.toFixed(4)}</span>`;
+        
+        row.innerHTML = `
+          <td class="formula-cell">${phase.formula}</td>
+          <td>${phase.composition}</td>
+          <td class="energy-cell ${formationEnergyClass}">
+            ${phase.formation_energy_per_atom !== null ? phase.formation_energy_per_atom.toFixed(4) : 'N/A'}
+          </td>
+          <td class="energy-cell">${phase.energy_per_atom.toFixed(4)}</td>
+          <td class="energy-cell">${correctionHtml}</td>
+          <td class="entry-id-cell">${mpIdHtml}</td>
+        `;
+        
+        phaseTableBody.appendChild(row);
+      });
+      
+      console.log('✅ Phase information table displayed');
+    }
+
+    // Simple encryption/decryption functions - using hex encoding for reliability
+    function simpleEncrypt(text) {
+      if (!text) return '';
+      try {
+        const key = 'PhaseNavigatorKey';
+        let encrypted = '';
+        for (let i = 0; i < text.length; i++) {
+          const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+          // Convert to hex for safe storage
+          encrypted += charCode.toString(16).padStart(2, '0');
+        }
+        return encrypted;
+      } catch (e) {
+        console.error('Encryption failed:', e);
+        return '';
+      }
+    }
+    
+    function simpleDecrypt(encrypted) {
+      if (!encrypted) return '';
+      try {
+        const key = 'PhaseNavigatorKey';
+        let decrypted = '';
+        // Process hex pairs
+        for (let i = 0; i < encrypted.length; i += 2) {
+          const hexPair = encrypted.substr(i, 2);
+          const charCode = parseInt(hexPair, 16) ^ key.charCodeAt((i / 2) % key.length);
+          decrypted += String.fromCharCode(charCode);
+        }
+        return decrypted;
+      } catch (e) {
+        console.error('Decryption failed:', e);
+        return '';
+      }
+    }
+    
+    // APIキーの復元関数
+    function restoreApiKey() {
+      console.log('Attempting to restore API key...');
+      console.log('localStorage available:', typeof Storage !== 'undefined');
+      
+      try {
+        const storedKey = localStorage.getItem('mp_api_key_encrypted');
+        console.log('Stored key found:', !!storedKey);
+        console.log('Stored key length:', storedKey ? storedKey.length : 0);
+        
+        if (storedKey) {
+          const decryptedKey = simpleDecrypt(storedKey);
+          console.log('Decrypted key success:', !!decryptedKey);
+          console.log('Decrypted key length:', decryptedKey ? decryptedKey.length : 0);
+          
+          // Validate decrypted key format
+          if (decryptedKey && (decryptedKey.length !== 32 || !/^[A-Za-z0-9]{32}$/.test(decryptedKey))) {
+            console.log('❌ Decrypted key format invalid');
+            console.log('  Expected: 32 alphanumeric characters');
+            console.log('  Actual length:', decryptedKey.length);
+            console.log('  First 8 chars:', decryptedKey.substring(0, Math.min(8, decryptedKey.length)));
+            console.log('  Contains non-alphanumeric:', !/^[A-Za-z0-9]*$/.test(decryptedKey));
+            console.log('  Character codes:', Array.from(decryptedKey.substring(0, 8)).map(c => c.charCodeAt(0)));
+            // Clear corrupted key
+            localStorage.removeItem('mp_api_key_encrypted');
+            console.log('🗑️ Cleared corrupted stored key');
+          } else if (decryptedKey && elements.apiInput) {
+            elements.apiInput.value = decryptedKey;
+            console.log('✅ API key restored to input field');
+            return true;
+          } else {
+            console.error('❌ API input element not found or decryption failed');
+          }
+        } else {
+          console.log('ℹ️ No stored API key found');
+        }
+      } catch (error) {
+        console.error('❌ Error restoring API key:', error);
+      }
+      return false;
+    }
+
+    // パラメータ表示を更新する関数（状態図内に表示するため簡素化）
+    function updateDiagramDisplay() {
+      // Parameters are now displayed directly in the plot annotations
+      console.log('Diagram parameters updated in plot annotations');
+    }
+
+    // 温度コントロール初期化
+    function initTemperatureControls() {
+      console.log('Initializing temperature controls');
+      elements.tempControls.style.display = 'none';
+      elements.finalTempInput.value = '0';
+      elements.tempUnitToggle.checked = false; // デフォルトはKelvin
+      elements.tempSlider.value = '300';
+      elements.tempInput.value = '300';
+      updateTemperatureDisplay(true); // Kelvin表示
+      updateTemperatureConversion();
+      updateDiagramDisplay();
+    }
+
+    // トグル状態更新
+    function updateTemperatureControls() {
+      const isChecked = elements.tempToggle.checked;
+      console.log('Temperature toggle changed to:', isChecked);
+      
+      elements.tempControls.style.display = isChecked ? 'block' : 'none';
+      elements.finalTempInput.value = isChecked ? elements.tempInput.value : '0';
+      
+      if (isChecked && !elements.tempInput.value) {
+        elements.tempInput.value = '300';
+        elements.tempSlider.value = '300';
+        elements.finalTempInput.value = '300';
+      }
+      
+      updateDiagramDisplay();
+    }
+
+    // スライダーと入力値の同期
+    function syncTemperatureValues() {
+      const value = elements.tempSlider.value;
+      elements.tempInput.value = value;
+      if (elements.tempToggle.checked) {
+        elements.finalTempInput.value = getKelvinValue();
+      }
+      updateTemperatureConversion();
+      console.log('Synced temperature values:', value);
+      updateDiagramDisplay();
+    }
+
+    // 入力値の検証
+    function validateTemperatureInput() {
+      const isKelvin = !elements.tempUnitToggle.checked;
+      let value = elements.tempInput.value;
+      
+      if (value === '') {
+        value = isKelvin ? '300' : '27';
+      }
+      
+      if (isKelvin) {
+        value = Math.min(2000, Math.max(300, parseInt(value, 10) || 300));
+      } else {
+        value = Math.min(1727, Math.max(27, parseInt(value, 10) || 27));
+      }
+      
+      elements.tempInput.value = value;
+      elements.tempSlider.value = value;
+      
+      if (elements.tempToggle.checked) {
+        elements.finalTempInput.value = getKelvinValue();
+      }
+      
+      updateTemperatureConversion();
+      console.log('Validated temperature:', value);
+      updateDiagramDisplay();
+    }
+
+    // フォーム入力変更時の処理
+    function handleFormInputChange() {
+      updateDiagramDisplay();
+    }
+
+    // Show/hide loading state
+    function setLoadingState(isLoading) {
+      const submitBtn = document.getElementById('submit-btn');
+      const submitText = document.getElementById('submit-text');
+      const submitLoading = document.getElementById('submit-loading');
+      
+      if (isLoading) {
+        submitText.style.display = 'none';
+        submitLoading.style.display = 'flex';
+        submitBtn.disabled = true;
+      } else {
+        submitText.style.display = 'inline';
+        submitLoading.style.display = 'none';
+        submitBtn.disabled = false;
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      elements.plotDiv.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    // Show loading message with progress
+    function showLoading() {
+      elements.plotDiv.innerHTML = `
+        <div class="loading">
+          <div class="loading-spinner"></div>
+          Generating phase diagram...
+        </div>
+        <div class="progress-steps">
+          <div class="progress-step active" id="step-1">
+            <div class="progress-step-icon">1</div>
+            <span>Validating input formulas...</span>
+          </div>
+          <div class="progress-step pending" id="step-2">
+            <div class="progress-step-icon">2</div>
+            <span>Fetching data from Materials Project...</span>
+          </div>
+          <div class="progress-step pending" id="step-3">
+            <div class="progress-step-icon">3</div>
+            <span>Building phase diagram...</span>
+          </div>
+          <div class="progress-step pending" id="step-4">
+            <div class="progress-step-icon">4</div>
+            <span>Rendering interactive plot...</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update progress step
+    function updateProgress(stepNumber) {
+      for (let i = 1; i <= stepNumber; i++) {
+        const step = document.getElementById(`step-${i}`);
+        if (step) {
+          step.className = 'progress-step completed';
+          step.querySelector('.progress-step-icon').innerHTML = '✓';
+        }
+      }
+      
+      const nextStep = document.getElementById(`step-${stepNumber + 1}`);
+      if (nextStep) {
+        nextStep.className = 'progress-step active';
+      }
+    }
+
+    // 状態図生成関数
+    async function generatePhaseDiagram(formulas, temp, e_cut, functional, api_key) {
+      console.log('Generating phase diagram with:', { formulas, temp, e_cut, functional });
+      
+      try {
+        setLoadingState(true);
+        showLoading();
+        
+        // Step 1: Validation completed
+        updateProgress(1);
+        
+        // Step 2: Fetching data
+        updateProgress(1);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Small delay for UX
+        
+        // Data type validation and conversion
+        const tempNumber = Number(temp);
+        const eCutNumber = Number(e_cut);
+        
+        console.log('🔍 Data conversion check:');
+        console.log('  temp (raw):', temp, '→ (number):', tempNumber, '(valid):', !isNaN(tempNumber));
+        console.log('  e_cut (raw):', e_cut, '→ (number):', eCutNumber, '(valid):', !isNaN(eCutNumber));
+        console.log('  formulas type:', Array.isArray(formulas), 'length:', formulas.length);
+        
+        if (isNaN(tempNumber)) {
+          throw new Error(`Invalid temperature value: ${temp}`);
+        }
+        if (isNaN(eCutNumber)) {
+          throw new Error(`Invalid e_cut value: ${e_cut}`);
+        }
+        if (!Array.isArray(formulas) || formulas.length === 0) {
+          throw new Error(`Invalid formulas array: ${formulas}`);
+        }
+        
+        const requestData = {
+          f: formulas,
+          temp: tempNumber,
+          e_cut: eCutNumber,
+          functional: functional
+        };
+        
+        console.log('🚀 Sending request to /diagram/raw');
+        console.log('📊 Request data:', JSON.stringify(requestData, null, 2));
+        
+        // JSON serialization validation
+        try {
+          const jsonString = JSON.stringify(requestData);
+          const parsedBack = JSON.parse(jsonString);
+          console.log('✅ JSON serialization test passed');
+          console.log('🔍 Serialized length:', jsonString.length);
+        } catch (jsonError) {
+          console.log('❌ JSON serialization failed:', jsonError);
+          throw new Error(`JSON serialization error: ${jsonError.message}`);
+        }
+        console.log('🔑 API key length:', api_key.length);
+        console.log('📧 Request headers:', {
+          'Content-Type': 'application/json',
+          'X-API-KEY': `${api_key.substring(0, 4)}...${api_key.substring(28, 32)}` // Only show first 4 and last 4 chars
+        });
+        
+        // Validate API key format with detailed logging
+        console.log('🔍 API key validation:');
+        console.log('  Raw key length:', api_key.length);
+        console.log('  First 8 chars:', api_key.substring(0, Math.min(8, api_key.length)));
+        console.log('  Character codes:', Array.from(api_key.substring(0, 8)).map(c => c.charCodeAt(0)));
+        
+        if (api_key.length !== 32) {
+          console.log('❌ API key length validation failed');
+          throw new Error(`API key must be exactly 32 characters long. Current length: ${api_key.length}`);
+        }
+        
+        if (!/^[A-Za-z0-9]{32}$/.test(api_key)) {
+          console.log('❌ API key format validation failed');
+          console.log('  Contains non-alphanumeric characters');
+          // Clear potentially corrupted stored key
+          localStorage.removeItem('mp_api_key_encrypted');
+          console.log('🗑️ Cleared stored key due to format validation failure');
+          throw new Error('API key format is invalid. Expected 32 alphanumeric characters only.');
+        }
+        console.log('✅ API key format validation passed');
+        
+        let response;
+        try {
+          response = await fetch('/diagram/raw', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': api_key
+            },
+            body: JSON.stringify(requestData)
+          });
+          console.log('✅ Fetch completed successfully');
+        } catch (fetchError) {
+          console.log('❌ Fetch failed:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}`);
+        }
+
+        console.log('Response status:', response.status);
+        updateProgress(2);
+
+        if (!response.ok) {
+          console.log('❌ Response failed with status:', response.status);
+          console.log('❌ Response headers:', [...response.headers.entries()]);
+          
+          let error = {};
+          try {
+            const responseText = await response.text();
+            console.log('❌ Raw response text:', responseText);
+            error = JSON.parse(responseText);
+          } catch (parseError) {
+            console.log('❌ Failed to parse response as JSON:', parseError);
+            error = { detail: `HTTP ${response.status}: Could not parse response` };
+          }
+          
+          console.log('❌ Parsed error object:', error);
+          
+          let errorMessage = error.detail || `Server returned ${response.status}`;
+          
+          // Check if the error contains Materials Project API error info
+          if (typeof error.detail === 'string' && error.detail.includes('Invalid authentication credentials')) {
+            errorMessage = 'Invalid API key. Please check your Materials Project API key and ensure it is 32 characters long.';
+          } else if (response.status === 401) {
+            errorMessage = 'Invalid API key. Please check your Materials Project API key.';
+          } else if (response.status === 400) {
+            errorMessage = `Invalid request: ${error.detail || 'Please check your input parameters.'}`;
+          } else if (response.status === 429) {
+            errorMessage = 'Rate limit exceeded. Please wait 30 seconds before trying again.';
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        // Step 3: Building phase diagram
+        updateProgress(3);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const responseData = await response.json();
+        console.log('Received response data:', responseData);
+
+        // Extract plot data and phase info from new response format
+        const plotData = responseData.plot || responseData; // Backward compatibility
+        const phaseInfo = responseData.phase_info || [];
+        const metadata = responseData.metadata || {};
+
+        // Step 4: Rendering plot
+        // 既存のプロットをクリア
+        while (elements.plotDiv.firstChild) {
+          elements.plotDiv.removeChild(elements.plotDiv.firstChild);
+        }
+        
+        // 新しいプロットを作成
+        const config = {
+          responsive: true,
+          displayModeBar: true,
+          displaylogo: false,
+          modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d']
+        };
+        
+        // レイアウトの調整
+        if (plotData.layout) {
+          plotData.layout.margin = plotData.layout.margin || {};
+          plotData.layout.margin.l = Math.max(plotData.layout.margin.l || 0, 80);
+          plotData.layout.margin.r = Math.max(plotData.layout.margin.r || 0, 40);
+          plotData.layout.margin.t = Math.max(plotData.layout.margin.t || 0, 100);
+          plotData.layout.margin.b = Math.max(plotData.layout.margin.b || 0, 60);
+          
+          // Add annotations for temperature and energy cutoff
+          plotData.layout.annotations = plotData.layout.annotations || [];
+          
+          // Temperature annotation (top margin area, outside plot)
+          let tempText;
+          if (temp !== '0') {
+            const kelvinTemp = parseInt(temp);
+            const celsiusTemp = Math.round(kelvinToCelsius(kelvinTemp));
+            tempText = `T = ${kelvinTemp} K (${celsiusTemp}°C)`;
+          } else {
+            tempText = 'T = 0 K (-273°C)';
+          }
+          plotData.layout.annotations.push({
+            x: 0.02,
+            y: 1.05,
+            xref: 'paper',
+            yref: 'paper',
+            text: tempText,
+            showarrow: false,
+            font: {
+              size: 14,
+              color: '#333',
+              family: 'Arial, sans-serif',
+              weight: 'bold'
+            },
+            xanchor: 'left',
+            yanchor: 'bottom'
+          });
+          
+          // Energy cutoff annotation (top margin area, right side)
+          plotData.layout.annotations.push({
+            x: 0.98,
+            y: 1.05,
+            xref: 'paper',
+            yref: 'paper',
+            text: `E<sub>cut</sub> = ${e_cut} eV/atom`,
+            showarrow: false,
+            font: {
+              size: 14,
+              color: '#333',
+              family: 'Arial, sans-serif',
+              weight: 'bold'
+            },
+            xanchor: 'right',
+            yanchor: 'bottom'
+          });
+        }
+        
+        await Plotly.newPlot(elements.plotDiv, plotData.data, plotData.layout, config);
+        console.log('Plotly chart rendered successfully');
+        
+        updateProgress(4);
+        
+        // Display phase information if available
+        if (phaseInfo && phaseInfo.length > 0) {
+          displayPhaseInformation(phaseInfo, metadata);
+        }
+        
+        // 表示を更新
+        updateDiagramDisplay();
+      } catch (error) {
+        console.error('Error generating phase diagram:', error);
+        showError(error.message);
+      } finally {
+        setLoadingState(false);
+      }
+    }
+
+    // Form validation
+    function validateForm() {
+      const formulas = elements.formulasInput.value
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f && f.length > 0 && f !== '');
+      
+      const api_key = elements.apiInput.value.trim();
+      const e_cut = parseFloat(elements.eCutInput.value);
+      
+      console.log('🔍 Validating form:');
+      console.log('  📝 Raw input:', elements.formulasInput.value);
+      console.log('  🧪 Processed formulas:', formulas);
+      console.log('  📊 Formula count:', formulas.length);
+      console.log('  🔑 API key length:', api_key.length);
+      console.log('  ⚡ E_cut:', e_cut);
+      
+      if (formulas.length < 2) {
+        showError('Please enter at least 2 chemical formulas separated by commas.');
+        return false;
+      }
+      
+      if (formulas.length > 4) {
+        showError('Maximum 4 formulas allowed. Please remove some formulas.');
+        return false;
+      }
+      
+      // Check for empty formulas
+      for (let i = 0; i < formulas.length; i++) {
+        if (!formulas[i] || formulas[i].trim() === '') {
+          showError(`Formula ${i + 1} is empty. Please check your input.`);
+          return false;
+        }
+      }
+      
+      if (!api_key) {
+        showError('Please enter your Materials Project API key.');
+        return false;
+      }
+      
+      if (api_key.length !== 32) {
+        showError('API key must be exactly 32 characters long.');
+        return false;
+      }
+      
+      if (isNaN(e_cut) || e_cut < 0) {
+        showError('Energy cutoff must be a number greater than or equal to 0.');
+        return false;
+      }
+      
+      return true;
+    }
+
+    // フォーム送信処理をボタンクリックに変更  
+    console.log('🔘 Setting up submit button click listener...');
+    console.log('🔘 Submit button element:', elements.submitBtn);
+    
+    elements.submitBtn.addEventListener('click', async function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🚀 Button clicked! Form submission started');
+      console.log('🔍 Event object:', e);
+      
+      // Validate form
+      if (!validateForm()) {
+        return;
+      }
+      
+      // APIキーを暗号化して保存
+      const apiKeyValue = elements.apiInput.value.trim();
+      console.log('💾 Saving API key:');
+      console.log('  Original length:', apiKeyValue.length);
+      console.log('  Original format valid:', /^[A-Za-z0-9]{32}$/.test(apiKeyValue));
+      
+      try {
+        const encryptedKey = simpleEncrypt(apiKeyValue);
+        console.log('🔐 Encryption result:');
+        console.log('  Encrypted length:', encryptedKey.length);
+        console.log('  Encrypted preview:', encryptedKey.substring(0, 16) + '...');
+        
+        localStorage.setItem('mp_api_key_encrypted', encryptedKey);
+        
+        // 保存確認とテスト復元
+        const verification = localStorage.getItem('mp_api_key_encrypted');
+        console.log('✅ Storage verification:', verification === encryptedKey);
+        
+        // 即座にテスト復元
+        const testDecrypt = simpleDecrypt(verification);
+        console.log('🧪 Test decryption:');
+        console.log('  Decrypted length:', testDecrypt.length);
+        console.log('  Decrypted matches original:', testDecrypt === apiKeyValue);
+        console.log('  Decrypted format valid:', /^[A-Za-z0-9]{32}$/.test(testDecrypt));
+        
+        // 古い平文キーがあれば削除
+        localStorage.removeItem('mp_api_key_plain');
+      } catch (error) {
+        console.error('❌ Error saving API key:', error);
+      }
+      
+      // フォームデータ収集
+      const formulas = elements.formulasInput.value
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f && f.length > 0 && f !== '');
+      
+      const temp = elements.tempToggle.checked ? getKelvinValue() : '0';
+      const e_cut = elements.eCutInput.value;
+      const functional = elements.functionalSelect.value;
+      const api_key = elements.apiInput.value.trim();
+      
+      console.log('📋 Form data collected:');
+      console.log('  🧪 Formulas raw input:', elements.formulasInput.value);
+      console.log('  🧪 Formulas processed:', formulas);
+      console.log('  🧪 Formulas count:', formulas.length);
+      console.log('  🌡️ Temperature:', temp, '(type:', typeof temp, ')');
+      console.log('  ⚡ E_cut:', e_cut, '(type:', typeof e_cut, ')');
+      console.log('  🔬 Functional:', functional, '(type:', typeof functional, ')');
+      console.log('  🔑 API key length:', api_key.length);
+
+      await generatePhaseDiagram(formulas, temp, e_cut, functional, api_key);
+    });
+
+    // フォーム送信を完全に阻止
+    elements.pdForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('Form submit event blocked');
+      return false;
+    });
+
+    // イベントリスナー設定
+    console.log('🔧 Setting up event listeners...');
+    elements.tempToggle.addEventListener('change', updateTemperatureControls);
+    console.log('✅ tempToggle event listener added');
+    
+    elements.tempUnitToggle.addEventListener('change', toggleTemperatureUnit);
+    console.log('✅ tempUnitToggle event listener added');
+    console.log('  tempUnitToggle element:', elements.tempUnitToggle);
+    console.log('  tempUnitToggle checked:', elements.tempUnitToggle.checked);
+    
+    elements.tempSlider.addEventListener('input', syncTemperatureValues);
+    elements.tempInput.addEventListener('input', validateTemperatureInput);
+    elements.formulasInput.addEventListener('input', handleFormInputChange);
+    elements.eCutInput.addEventListener('input', handleFormInputChange);
+    console.log('✅ All event listeners set up');
+
+    // 初期化実行
+    initTemperatureControls();
+    updateTemperatureControls();
+    
+    // Set default energy cutoff if empty
+    if (!elements.eCutInput.value) {
+      elements.eCutInput.value = '0.2';
+    }
+    
+    // APIキーの復元を早期に実行
+    console.log('🔄 Starting API key restoration...');
+    restoreApiKey();
+    
+    // 追加のデバッグ - ページロード後の状態確認
+    setTimeout(() => {
+      console.log('📋 Page load status check:');
+      console.log('  API input value:', elements.apiInput.value);
+      console.log('  API input length:', elements.apiInput.value.length);
+      console.log('  localStorage has key:', !!localStorage.getItem('mp_api_key_encrypted'));
+    }, 500);
+
+    // ページ読み込み時に状態図生成が必要な場合
+    {% if formulas %}
+    setTimeout(function() {
+      console.log('Initial page load with formulas');
+      elements.pdForm.dispatchEvent(new Event('submit'));
+    }, 100);
+    {% endif %}
+  });
+</script>
+
+</body>
+</html>

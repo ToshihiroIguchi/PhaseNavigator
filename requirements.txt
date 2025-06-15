@@ -6,3 +6,6 @@ jinja2
 plotly
 python-multipart
 cryptography
+pydantic-settings
+pytest
+httpx
