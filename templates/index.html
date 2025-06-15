@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Phase Navigator</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     :root {
@@ -537,6 +538,130 @@
       box-sizing: border-box;
     }
 
+    /* Phase Information Table Styles */
+    .phase-info-container {
+      margin-top: 2rem;
+      background: var(--gray-50);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--gray-300);
+      overflow: hidden;
+      display: none;
+    }
+
+    .phase-info-header {
+      background: var(--primary-600);
+      color: white;
+      padding: 1rem 1.5rem;
+      font-weight: 600;
+      font-size: 1.125rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .phase-info-content {
+      padding: 1.5rem;
+    }
+
+    .phase-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .phase-table th {
+      background: var(--primary-50);
+      color: var(--primary-700);
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 2px solid var(--primary-200);
+      font-size: 0.875rem;
+    }
+
+    .phase-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 0.875rem;
+      vertical-align: middle;
+    }
+
+    .phase-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .phase-table tr:hover {
+      background: var(--primary-50);
+    }
+
+    .formula-cell {
+      font-weight: 600;
+      color: var(--primary-700);
+    }
+
+    .energy-cell {
+      font-family: 'Courier New', monospace;
+      text-align: right;
+    }
+
+    .entry-id-cell {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      font-family: 'Courier New', monospace;
+    }
+
+    .entry-id-cell a {
+      color: var(--primary-600);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .entry-id-cell a:hover {
+      color: var(--primary-700);
+      text-decoration: underline;
+    }
+
+    .entry-id-cell a:visited {
+      color: var(--primary-500);
+    }
+
+    .phase-summary {
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      background: var(--primary-50);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      color: var(--primary-700);
+    }
+
+    .energy-positive {
+      color: var(--red-500);
+    }
+
+    .energy-negative {
+      color: var(--green-500);
+    }
+
+    .energy-zero {
+      color: var(--gray-600);
+    }
+
+    .info-icon {
+      color: var(--primary-500);
+      font-size: 0.8rem;
+      margin-left: 0.25rem;
+      cursor: help;
+      user-select: none;
+    }
+
+    .info-icon:hover {
+      color: var(--primary-700);
+    }
+
     @media (max-width: 768px) {
       body {
         margin: 1rem;
@@ -787,6 +912,34 @@
 
   <div id="output">
     <div id="plot"></div>
+    
+    <div id="phase-info" class="phase-info-container">
+      <div class="phase-info-header">
+        <span>📊</span>
+        <span>Phase Information</span>
+        <span id="phase-count"></span>
+      </div>
+      <div class="phase-info-content">
+        <div id="phase-summary" class="phase-summary"></div>
+        <div style="overflow-x: auto;">
+          <table id="phase-table" class="phase-table">
+            <thead>
+              <tr>
+                <th>Formula</th>
+                <th>Composition</th>
+                <th>Formation Energy<br><small>(eV/atom)</small></th>
+                <th>Total Energy<br><small>(eV/atom)</small></th>
+                <th>Correction<br><small>(eV)</small><span class="info-icon" title="Energy correction for DFT systematic errors. Zero indicates no correction applied (reference state or correction not needed)">ⓘ</span></th>
+                <th>MP ID<br><small>(Click to view details)</small></th>
+              </tr>
+            </thead>
+            <tbody id="phase-table-body">
+              <!-- Phase data will be inserted here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -937,6 +1090,92 @@
       const currentValue = parseFloat(elements.tempInput.value) || 300;
       const isKelvin = !elements.tempUnitToggle.checked;
       return isKelvin ? currentValue : Math.round(celsiusToKelvin(currentValue));
+    }
+
+    // 相情報表示関数
+    function displayPhaseInformation(phaseInfo, metadata) {
+      console.log('📊 Displaying phase information:', phaseInfo);
+      
+      const phaseInfoContainer = document.getElementById('phase-info');
+      const phaseCount = document.getElementById('phase-count');
+      const phaseSummary = document.getElementById('phase-summary');
+      const phaseTableBody = document.getElementById('phase-table-body');
+      
+      // Show the container
+      phaseInfoContainer.style.display = 'block';
+      
+      // Update header
+      phaseCount.textContent = `(${phaseInfo.length} phases)`;
+      
+      // Update summary
+      const temp = metadata.temperature || 0;
+      const tempText = temp === 0 ? '0 K' : `${temp} K (${Math.round(kelvinToCelsius(temp))}°C)`;
+      // Check if any phases have non-zero corrections
+      const hasCorrections = phaseInfo.some(phase => phase.correction !== 0);
+      const correctionNote = hasCorrections ? 
+        'Some phases include DFT energy corrections.' : 
+        'No energy corrections applied (all phases are reference states).';
+      
+      phaseSummary.innerHTML = `
+        <strong>Calculation Details:</strong> 
+        Temperature = ${tempText}, 
+        Functional = ${metadata.functional || 'Unknown'}, 
+        Energy cutoff = ${metadata.e_cut || 0} eV/atom<br>
+        <strong>Energy Corrections:</strong> ${correctionNote}
+      `;
+      
+      // Clear existing table rows
+      phaseTableBody.innerHTML = '';
+      
+      // Populate table
+      phaseInfo.forEach((phase, index) => {
+        const row = document.createElement('tr');
+        
+        // Formation energy color coding
+        let formationEnergyClass = 'energy-zero';
+        if (phase.formation_energy_per_atom !== null) {
+          if (phase.formation_energy_per_atom > 0) {
+            formationEnergyClass = 'energy-positive';
+          } else if (phase.formation_energy_per_atom < 0) {
+            formationEnergyClass = 'energy-negative';
+          }
+        }
+        
+        // Format MP ID with link if it's a valid Materials Project ID
+        let mpIdHtml = phase.entry_id;
+        if (phase.entry_id && phase.entry_id !== 'Unknown' && 
+            (phase.entry_id.startsWith('mp-') || phase.entry_id.startsWith('mvc-'))) {
+          
+          // Clean MP ID by removing functional suffixes (e.g., -r2SCAN, -GGA+U)
+          const cleanMpId = phase.entry_id.replace(/-r2SCAN|-GGA\+U|-scan|-pbe|-hsesol/gi, '');
+          
+          // Extract functional suffix for display
+          const functionalSuffix = phase.entry_id.replace(cleanMpId, '');
+          
+          // Display with functional info and link to clean ID
+          mpIdHtml = `<a href="https://materialsproject.org/materials/${cleanMpId}/" target="_blank" rel="noopener noreferrer" title="View ${cleanMpId} on Materials Project (computed with ${functionalSuffix.replace('-', '') || 'standard functional'})">${cleanMpId}<span style="color: var(--gray-400); font-size: 0.8em;">${functionalSuffix}</span></a>`;
+        }
+        
+        // Add tooltip for correction explanation
+        const correctionHtml = phase.correction !== 0 ? 
+          `<span title="Energy correction for DFT systematic errors">${phase.correction.toFixed(4)}</span>` : 
+          `<span title="No energy correction applied (reference state or correction not needed)">${phase.correction.toFixed(4)}</span>`;
+        
+        row.innerHTML = `
+          <td class="formula-cell">${phase.formula}</td>
+          <td>${phase.composition}</td>
+          <td class="energy-cell ${formationEnergyClass}">
+            ${phase.formation_energy_per_atom !== null ? phase.formation_energy_per_atom.toFixed(4) : 'N/A'}
+          </td>
+          <td class="energy-cell">${phase.energy_per_atom.toFixed(4)}</td>
+          <td class="energy-cell">${correctionHtml}</td>
+          <td class="entry-id-cell">${mpIdHtml}</td>
+        `;
+        
+        phaseTableBody.appendChild(row);
+      });
+      
+      console.log('✅ Phase information table displayed');
     }
 
     // Simple encryption/decryption functions - using hex encoding for reliability
@@ -1299,8 +1538,13 @@
         updateProgress(3);
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        const plotData = await response.json();
-        console.log('Received plot data:', plotData);
+        const responseData = await response.json();
+        console.log('Received response data:', responseData);
+
+        // Extract plot data and phase info from new response format
+        const plotData = responseData.plot || responseData; // Backward compatibility
+        const phaseInfo = responseData.phase_info || [];
+        const metadata = responseData.metadata || {};
 
         // Step 4: Rendering plot
         // 既存のプロットをクリア
@@ -1376,6 +1620,11 @@
         console.log('Plotly chart rendered successfully');
         
         updateProgress(4);
+        
+        // Display phase information if available
+        if (phaseInfo && phaseInfo.length > 0) {
+          displayPhaseInformation(phaseInfo, metadata);
+        }
         
         // 表示を更新
         updateDiagramDisplay();
