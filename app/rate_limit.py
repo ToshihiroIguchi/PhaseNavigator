@@ -1,14 +1,15 @@
 import time
 from collections import defaultdict
+from typing import Dict, List, Tuple
 
 WINDOW = 30          # seconds
 MAX_REQ = 10
 
 # {key: [timestamps]}
-_request_log: defaultdict[tuple, list] = defaultdict(list)
+_request_log: Dict[Tuple[str, str], List[float]] = defaultdict(list)
 
 
-def check_limit(key: tuple[str, str]) -> bool:
+def check_limit(key: Tuple[str, str]) -> bool:
     """Return True if request is allowed, False if rate-limited."""
     now = time.time()
     log = _request_log[key]
