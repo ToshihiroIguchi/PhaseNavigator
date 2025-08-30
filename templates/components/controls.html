@@ -92,7 +92,7 @@
         <option value="R2SCAN" {% if functional == "R2SCAN" %}selected{% endif %}>
           R2SCAN
         </option>
-        <option value="GGA_GGA_U" {% if functional == "GGA_GGA_U" %}selected{% endif %}>
+        <option value="GGA_GGA_U" {% if functional == "GGA_GGA_U" or not functional %}selected{% endif %}>
           GGA/GGA+U
         </option>
       </select>

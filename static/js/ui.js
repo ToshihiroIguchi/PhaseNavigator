@@ -41,6 +41,14 @@ class UIManager {
     };
   }
 
+  async ensurePlotlyAvailable(maxWait = 5000) {
+    const start = Date.now();
+    while (typeof Plotly === 'undefined' && (Date.now() - start) < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    return typeof Plotly !== 'undefined';
+  }
+
   initializeEventListeners() {
     // Form submission
     this.elements.submitBtn.addEventListener('click', () => this.handleSubmit());
@@ -423,10 +431,11 @@ class UIManager {
       this.elements.plotDiv.innerHTML = '';
       
       // Create plot
-      // Check if Plotly library is loaded
-      if (typeof Plotly === 'undefined') {
-        console.error('Plotly library not loaded');
-        this.showError('Plot library unavailable. Please refresh the page.');
+      // Enhanced Plotly loading check with timeout
+      const plotlyAvailable = await this.ensurePlotlyAvailable(5000);
+      if (!plotlyAvailable) {
+        console.error('Plotly library not loaded within timeout');
+        this.showError('Plot library loading timeout. Please refresh the page.');
         return;
       }
 
