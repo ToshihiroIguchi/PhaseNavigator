@@ -423,6 +423,13 @@ class UIManager {
       this.elements.plotDiv.innerHTML = '';
       
       // Create plot
+      // Check if Plotly library is loaded
+      if (typeof Plotly === 'undefined') {
+        console.error('Plotly library not loaded');
+        this.showError('Plot library unavailable. Please refresh the page.');
+        return;
+      }
+
       Plotly.newPlot(this.elements.plotDiv, plotData.data, plotData.layout, {
         responsive: true,
         displayModeBar: true,
