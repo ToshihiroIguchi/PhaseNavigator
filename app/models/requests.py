@@ -1,5 +1,5 @@
 from typing import List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from ..core.config import settings
 
@@ -10,8 +10,8 @@ class DiagramRequest(BaseModel):
     formulas: List[str] = Field(
         ..., 
         alias="f",
-        min_items=settings.min_formulas,
-        max_items=settings.max_formulas,
+        min_length=settings.min_formulas,
+        max_length=settings.max_formulas,
         description="List of chemical formulas"
     )
     temperature: int = Field(
@@ -31,7 +31,8 @@ class DiagramRequest(BaseModel):
         description="DFT functional type"
     )
     
-    @validator('temperature')
+    @field_validator('temperature')
+    @classmethod
     def validate_temperature(cls, v):
         if v != 0 and not (settings.min_temperature <= v <= settings.max_temperature):
             raise ValueError(
@@ -39,13 +40,15 @@ class DiagramRequest(BaseModel):
             )
         return v
     
-    @validator('functional')
+    @field_validator('functional')
+    @classmethod
     def validate_functional(cls, v):
         if v not in settings.supported_functionals:
             raise ValueError(f"Unsupported functional: {v}. Supported: {settings.supported_functionals}")
         return v
     
-    @validator('formulas')
+    @field_validator('formulas')
+    @classmethod
     def validate_formulas(cls, v):
         # Remove empty strings and strip whitespace
         cleaned = [f.strip() for f in v if f.strip()]

@@ -78,7 +78,7 @@ function restoreApiKey() {
 }
 
 function isValidApiKey(key) {
-  return key && key.length === 32 && /^[A-Za-z0-9]{32}$/.test(key);
+  return key && key.length >= 20 && /^[A-Za-z0-9]+$/.test(key);
 }
 
 // Validation utilities

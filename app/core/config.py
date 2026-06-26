@@ -1,5 +1,6 @@
 import os
 from typing import List
+from pydantic import ConfigDict
 
 try:
     from pydantic import BaseSettings
@@ -43,10 +44,11 @@ class Settings(BaseSettings):
     api_key_hash_length: int = 12
     MP_API_KEY: str | None = None
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-        extra = "ignore"
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 
 # Global settings instance

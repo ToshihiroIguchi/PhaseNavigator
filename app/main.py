@@ -3,7 +3,8 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
-from datetime import datetime
+from datetime import datetime, timezone
+from contextlib import asynccontextmanager
 
 from .core.config import settings
 from .core.logging import setup_logging, get_logger
@@ -15,12 +16,20 @@ from .api.health import router as health_router
 # Setup logging
 logger = setup_logging()
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
+    logger.info(f"Debug mode: {settings.debug}")
+    yield
+    logger.info(f"Shutting down {settings.app_name}")
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Phase diagram generation and analysis tool using Materials Project data",
-    debug=settings.debug
+    debug=settings.debug,
+    lifespan=lifespan
 )
 
 # Mount static files
@@ -51,8 +60,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=ErrorResponse(
             detail=f"Validation error: {exc.errors()}",
             error_code="VALIDATION_ERROR",
-            timestamp=datetime.utcnow().isoformat()
-        ).dict()
+            timestamp=datetime.now(timezone.utc).isoformat()
+        ).model_dump()
     )
 
 
@@ -64,8 +73,8 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         content=ErrorResponse(
             detail=exc.detail,
             error_code="HTTP_ERROR",
-            timestamp=datetime.utcnow().isoformat()
-        ).dict(),
+            timestamp=datetime.now(timezone.utc).isoformat()
+        ).model_dump(),
         headers=getattr(exc, 'headers', None)
     )
 
@@ -80,8 +89,8 @@ async def general_exception_handler(request: Request, exc: Exception):
         content=ErrorResponse(
             detail="Internal server error",
             error_code="INTERNAL_ERROR",
-            timestamp=datetime.utcnow().isoformat()
-        ).dict()
+            timestamp=datetime.now(timezone.utc).isoformat()
+        ).model_dump()
     )
 
 
@@ -134,17 +143,7 @@ async def diagram_form(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event."""
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    logger.info(f"Debug mode: {settings.debug}")
 
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event."""
-    logger.info(f"Shutting down {settings.app_name}")
 
 
 if __name__ == "__main__":

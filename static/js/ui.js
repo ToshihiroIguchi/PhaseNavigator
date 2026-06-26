@@ -246,7 +246,12 @@ class UIManager {
   }
 
   showError(message) {
-    this.elements.plotDiv.innerHTML = `<div class="error-message">${message}</div>`;
+    this.elements.plotDiv.innerHTML = `
+      <div class="error-message" style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="error-icon" style="font-size: 1.5rem;">⚠️</span>
+        <span>${message}</span>
+      </div>
+    `;
     this.hidePhaseInfo();
   }
 

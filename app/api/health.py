@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from ..core.config import settings
@@ -14,5 +14,5 @@ async def health_check():
         status="healthy",
         app_name=settings.app_name,
         version=settings.app_version,
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
