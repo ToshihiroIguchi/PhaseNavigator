@@ -136,12 +136,12 @@ function formatNumber(num, precision = 4) {
 // Clean MP ID for linking
 function cleanMpId(mpId) {
   if (!mpId || mpId === 'Unknown') return mpId;
-  return mpId.replace(/-r2SCAN|-GGA\+U|-scan|-pbe|-hsesol/gi, '');
+  return mpId.replace(/-r2SCAN|-GGA\+U|-GGA|-scan|-pbe|-hsesol/gi, '');
 }
 
 // Get functional suffix from MP ID
 function getFunctionalSuffix(mpId) {
   if (!mpId || mpId === 'Unknown') return '';
-  const match = mpId.match(/-r2SCAN|-GGA\+U|-scan|-pbe|-hsesol/gi);
+  const match = mpId.match(/-r2SCAN|-GGA\+U|-GGA|-scan|-pbe|-hsesol/gi);
   return match ? match[0] : '';
 }

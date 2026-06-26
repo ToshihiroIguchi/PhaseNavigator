@@ -88,7 +88,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Render the main application page."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.post("/diagram", response_class=HTMLResponse)
@@ -119,9 +119,9 @@ async def diagram_form(
         
         # Render template with validated parameters
         return templates.TemplateResponse(
-            "index.html",
-            {
-                "request": request,
+            request=request,
+            name="index.html",
+            context={
                 "formulas": ",".join(api_request.formulas),
                 "temp": api_request.temperature,
                 "e_cut": api_request.energy_cutoff,

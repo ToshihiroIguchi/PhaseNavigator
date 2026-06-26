@@ -41,10 +41,12 @@ class Settings(BaseSettings):
     
     # Security
     api_key_hash_length: int = 12
+    MP_API_KEY: str | None = None
     
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 # Global settings instance

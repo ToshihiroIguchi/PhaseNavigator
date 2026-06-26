@@ -48,4 +48,8 @@ def validate_api_key(api_key: str) -> bool:
     if len(api_key) < 20:
         return False
         
+    # Materials Project API keys are alphanumeric
+    if not api_key.isalnum():
+        return False
+        
     return True

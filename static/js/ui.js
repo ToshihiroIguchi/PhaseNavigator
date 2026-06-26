@@ -347,7 +347,7 @@ class UIManager {
         const cleanId = cleanMpId(phase.entry_id);
         const functionalSuffix = getFunctionalSuffix(phase.entry_id);
         
-        mpIdHtml = `<a href="https://materialsproject.org/materials/${cleanId}/" target="_blank" rel="noopener noreferrer" title="View ${cleanId} on Materials Project (computed with ${functionalSuffix.replace('-', '') || 'standard functional'})">${cleanId}<span style="color: var(--gray-400); font-size: 0.8em;">${functionalSuffix}</span></a>`;
+        mpIdHtml = `<a href="https://next-gen.materialsproject.org/materials/${cleanId}" target="_blank" rel="noopener noreferrer" title="View ${cleanId} on Materials Project (computed with ${functionalSuffix.replace('-', '') || 'standard functional'})">${cleanId}<span style="color: var(--gray-400); font-size: 0.8em;">${functionalSuffix}</span></a>`;
       }
       
       // Correction tooltip

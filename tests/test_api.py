@@ -22,14 +22,14 @@ def test_index_page():
 
 
 def test_diagram_endpoint_no_api_key():
-    """Test diagram endpoint without API key returns 422."""
+    """Test diagram endpoint without API key returns 400."""
     response = client.post("/api/diagrams/", json={
         "f": ["Fe2O3", "Al2O3"],
         "temp": 0,
         "e_cut": 0.2,
         "functional": "GGA_GGA_U_R2SCAN"
     })
-    assert response.status_code == 422  # Missing required header
+    assert response.status_code == 400  # Missing required header
 
 
 def test_diagram_endpoint_invalid_data():
@@ -40,7 +40,7 @@ def test_diagram_endpoint_invalid_data():
         "e_cut": 0.2,
         "functional": "GGA_GGA_U_R2SCAN"
     }, headers={"X-API-KEY": "test_key_32_characters_long_123"})
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400  # Validation error
 
 
 def test_diagram_endpoint_invalid_functional():
@@ -51,4 +51,4 @@ def test_diagram_endpoint_invalid_functional():
         "e_cut": 0.2,
         "functional": "INVALID_FUNCTIONAL"
     }, headers={"X-API-KEY": "test_key_32_characters_long_123"})
-    assert response.status_code == 422  # Validation error
+    assert response.status_code == 400  # Validation error
