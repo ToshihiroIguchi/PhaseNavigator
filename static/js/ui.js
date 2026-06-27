@@ -80,8 +80,8 @@ class UIManager {
     this.updateUnitLabels(true); // Set initial active state
   }
 
-  restoreApiKeyFromStorage() {
-    const restoredKey = restoreApiKey();
+  async restoreApiKeyFromStorage() {
+    const restoredKey = await restoreApiKey();
     if (restoredKey && this.elements.apiInput) {
       this.elements.apiInput.value = restoredKey;
     }
@@ -221,10 +221,14 @@ class UIManager {
     this.updateTemperatureConversion();
   }
 
-  handleApiKeyChange() {
+  async handleApiKeyChange() {
     const apiKey = this.elements.apiInput.value.trim();
-    if (apiKey && isValidApiKey(apiKey)) {
-      saveApiKey(apiKey);
+    if (apiKey) {
+      if (isValidApiKey(apiKey)) {
+        await saveApiKey(apiKey);
+      }
+    } else {
+      localStorage.removeItem('mp_api_key_encrypted');
     }
   }
 
@@ -397,7 +401,7 @@ class UIManager {
       }
       
       // Save API key
-      saveApiKey(apiKey);
+      await saveApiKey(apiKey);
       
       // Prepare request data
       const requestData = {

@@ -42,7 +42,6 @@ class Settings(BaseSettings):
     
     # Security
     api_key_hash_length: int = 12
-    MP_API_KEY: str | None = None
     
     model_config = ConfigDict(
         env_file=".env",

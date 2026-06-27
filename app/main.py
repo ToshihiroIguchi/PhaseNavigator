@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
 from datetime import datetime, timezone
+import asyncio
 from contextlib import asynccontextmanager
 
 from .core.config import settings
@@ -20,7 +21,29 @@ logger = setup_logging()
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
     logger.info(f"Debug mode: {settings.debug}")
+    
+    # Start background task to clear expired rate limits periodically (every 10 minutes)
+    async def clear_rate_limits_periodically():
+        from .services.rate_limiter import rate_limiter
+        try:
+            while True:
+                await asyncio.sleep(600)  # 10 minutes
+                rate_limiter.clear_expired()
+        except asyncio.CancelledError:
+            logger.info("Rate limit cleanup background task cancelled")
+        except Exception as e:
+            logger.error(f"Error in rate limit cleanup background task: {e}")
+
+    cleanup_task = asyncio.create_task(clear_rate_limits_periodically())
+    
     yield
+    
+    # Cancel the background task on shutdown
+    cleanup_task.cancel()
+    try:
+        await cleanup_task
+    except asyncio.CancelledError:
+        pass
     logger.info(f"Shutting down {settings.app_name}")
 
 # Create FastAPI app
