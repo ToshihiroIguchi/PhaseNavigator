@@ -14,7 +14,7 @@
 ## ✨ Key Features
 
 - ⚡ **Fast Performance**: Direct query to Materials Project with on-the-fly Plotly rendering
-- 🔐 **Secure API Storage**: Encrypted API key storage in browser localStorage with automatic persistence
+- 🔐 **Secure API Storage**: Cryptographically secure API key storage in browser using AES-GCM (256-bit) and IndexedDB
 - 🌡️ **Temperature Control**: Support for 0 K or finite temperature (300–2000 K) calculations
 - ⚙️ **Energy Cutoff**: Customizable energy cutoff for unstable phases visualization
 - 📱 **Responsive Design**: Mobile-friendly interface with optimized layouts
@@ -75,7 +75,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 1. **Get Materials Project API Key**: Sign up and get your free API key at [next-gen.materialsproject.org/api](https://next-gen.materialsproject.org/api)
 2. **Enter Chemical Formulas**: Input 2-4 chemical formulas (e.g., `BaO, MgO, SiO2`)
-3. **Save API Key**: Enter your API key once - it will be encrypted and stored securely in your browser for future use
+3. **Save API Key**: Enter your API key once - it will be encrypted using AES-GCM and stored securely in your browser with non-extractable keys in IndexedDB
 4. **Set Parameters**: 
    - Choose temperature (0 K for ground state, or 300-2000 K for finite temperature)
    - Adjust energy cutoff for unstable phases (default: 0.2 eV/atom)
@@ -150,16 +150,18 @@ The phase diagram generation follows these computational steps:
 
 ### API Endpoints
 - `GET /` - Main application interface
-- `POST /diagram` - Form submission handler
-- `POST /diagram/raw` - JSON API for phase diagram data
+- `POST /diagram` - Form submission handler (for browser compatibility)
+- `POST /api/diagrams/` - JSON API for generating phase diagram data (requires `X-API-KEY` header)
+- `GET /api/health/` - Application health check
 
 ### Security Features
-- Client-side API key encryption with hex encoding for reliability
+- Client-side API key encryption using **AES-GCM (256-bit)** via native browser Web Crypto API
+- Cryptographic key stored securely in **IndexedDB** as non-extractable (`extractable: false`)
 - Automatic API key persistence with format validation
 - Rate limiting (10 requests per 30 seconds)
 - Input validation and sanitization
-- No server-side API key storage
-- Secure localStorage management with corruption detection
+- Strictly no server-side API key storage or environment variable fallbacks
+- Secure storage management with corruption detection
 
 ## 📸 Screenshots
 
