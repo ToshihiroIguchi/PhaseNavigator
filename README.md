@@ -6,7 +6,6 @@
 
 *Interactive phase diagram generator for up to 4 components (solid phases) using the Materials Project API and **pymatgen**.*
 
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
 [![Python](https://img.shields.io/badge/Python-3.11%2B-green?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Framework-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Materials Project](https://img.shields.io/badge/Materials_Project-API-orange)](https://materialsproject.org)
@@ -25,19 +24,6 @@
 - 🛡️ **Robust Error Handling**: Comprehensive validation and user-friendly error messages
 
 ## 🚀 Quick Start
-
-### Using Docker (Recommended)
-
-```bash
-# Build the image
-docker build -t phasenavigator .
-
-# Run the container
-docker run -d -p 8000:8000 --name phasenavigator phasenavigator
-
-# Access the application
-open http://localhost:8000
-```
 
 ### Local Installation (virtual environment)
 
@@ -163,7 +149,6 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 - **Frontend**: Vanilla JavaScript with Plotly.js
 - **Data Source**: Materials Project API
 - **Computation**: pymatgen for phase diagram calculations
-- **Containerization**: Docker with a Python 3.13 slim image, dependencies installed into a dedicated virtual environment (`/opt/venv`)
 
 ### Computational Methodology
 
@@ -245,24 +230,10 @@ The phase diagram generation follows these computational steps:
 The Materials Project API key is **never** read from the environment or stored on the
 server. It is supplied by the browser through the `X-API-KEY` header on every request.
 
-### Docker Compose (Optional)
-
-```yaml
-version: '3.8'
-services:
-  phasenavigator:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - PORT=8000
-      - HOST=0.0.0.0
-```
-
 ## 📝 Requirements
 
-- **Docker** (recommended) or **Python 3.11+** with `venv` (3.10 and older are not supported
-  by the current `pymatgen` / `mp-api` / `emmet-core` releases)
+- **Python 3.11+** with `venv` (3.10 and older are not supported by the current
+  `pymatgen` / `mp-api` / `emmet-core` releases)
 - **Materials Project API Key** (free registration required)
 - **Modern web browser** with JavaScript enabled
 - **System dependencies** (for local installation): build-essential, gfortran, git, libblas-dev, liblapack-dev
@@ -349,14 +320,6 @@ These add-ons are optional and unnecessary for phase diagram generation. Skip th
 install them explicitly with `./setup.sh --with-pmg-addons` on a machine with a Fortran
 toolchain.
 
-**Docker not found:**
-```bash
-# Install Docker on Ubuntu/Debian
-sudo apt update && sudo apt install docker.io
-sudo systemctl start docker
-sudo usermod -aG docker $USER
-```
-
 **pip not found:**
 ```bash
 # Ubuntu/Debian
@@ -364,14 +327,6 @@ sudo apt install python3-pip
 
 # macOS
 python3 -m ensurepip --upgrade
-```
-
-**Permission denied for Docker:**
-```bash
-# Add user to docker group
-sudo usermod -aG docker $USER
-# Log out and back in, or run:
-newgrp docker
 ```
 
 **Build dependencies missing:**
