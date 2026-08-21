@@ -52,8 +52,6 @@ Guidance for Claude Code (and any AI assistant) working in this repository.
 
 - Update `requirements.txt` immediately when adding a library, and keep the lower
   version bounds in sync with the versions the project is verified against.
-- Keep `Dockerfile` consistent with `requirements.txt`; the image installs into its
-  own virtual environment at `/opt/venv`.
 
 ## 5. Git Rules
 
