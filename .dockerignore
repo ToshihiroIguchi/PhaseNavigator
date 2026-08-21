@@ -1,0 +1,17 @@
+# Keep the build context small and free of host-specific artifacts.
+.git/
+.github/
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+.env
+.env.local
+.claude/
+.vscode/
+.idea/
+sample.png

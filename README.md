@@ -7,7 +7,7 @@
 *Interactive phase diagram generator for up to 4 components (solid phases) using the Materials Project API and **pymatgen**.*
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
-[![Python](https://img.shields.io/badge/Python-3.10-green?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-green?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Framework-green?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Materials Project](https://img.shields.io/badge/Materials_Project-API-orange)](https://materialsproject.org)
 
@@ -39,36 +39,103 @@ docker run -d -p 8000:8000 --name phasenavigator phasenavigator
 open http://localhost:8000
 ```
 
-### Manual Installation
+### Local Installation (virtual environment)
+
+The project is developed and tested exclusively inside a Python virtual environment
+located at `./venv`. Do **not** install the dependencies into your system Python:
+a system-wide install almost always carries different (older) versions of
+`fastapi` / `pymatgen` and leads to import errors such as
+`ModuleNotFoundError: No module named 'mp_api'`.
 
 #### Prerequisites
+
+**Python 3.11 or newer is required** (`pymatgen`, `mp-api`, and `emmet-core` no
+longer support Python 3.10).
+
 ```bash
 # Ubuntu/Debian
 sudo apt update
-sudo apt install -y python3-pip build-essential gfortran git libblas-dev liblapack-dev
+sudo apt install -y python3 python3-venv python3-pip build-essential gfortran git libblas-dev liblapack-dev
 
 # macOS (using Homebrew)
-brew install python@3.10 gcc gfortran openblas lapack
+brew install python@3.13 gcc gfortran openblas lapack
+```
 
-# Windows (using conda)
-conda install python=3.10 pip
+```powershell
+# Windows: install Python 3.11+ from https://www.python.org/downloads/ or:
+winget install Python.Python.3.13
 ```
 
 #### Installation Steps
+
 ```bash
 # Clone the repository
 git clone https://github.com/ToshihiroIguchi/PhaseNavigator.git
 cd PhaseNavigator
+```
 
-# Install dependencies
-pip install -r requirements.txt
+**Linux / macOS**
 
-# Configure pymatgen
-pmg config --install enumlib
-pmg config --install bader
+```bash
+# Create ./venv and install all dependencies into it
+./setup.sh
 
-# Run the application
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+# Run the application (uses ./venv automatically)
+./run.sh
+
+# Run the test suite (uses ./venv automatically)
+./test.sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+# Create .\venv and install all dependencies into it
+.\setup.ps1
+
+# Run the application (uses .\venv automatically)
+.\run.ps1
+
+# Run the test suite (uses .\venv automatically)
+.\test.ps1
+```
+
+The application is then available at <http://localhost:8000>.
+Set `HOST` or `PORT` before calling the run script to change the bind address.
+
+#### Working in the environment manually
+
+If you prefer to run commands yourself, activate the environment first so that
+`python`, `pip`, `pytest`, and `uvicorn` all resolve to the virtual environment:
+
+```bash
+# Linux / macOS
+source venv/bin/activate
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+deactivate
+```
+
+```powershell
+# Windows (PowerShell)
+.\venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+deactivate
+```
+
+Without activation, always call the interpreter inside the environment explicitly
+(`venv/bin/python -m ...` or `venv\Scripts\python.exe -m ...`).
+
+#### Optional pymatgen add-ons
+
+`enumlib` and `bader` are **not** required for phase diagram generation. They need
+a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
+
+```bash
+./setup.sh --with-pmg-addons      # Linux / macOS
+```
+
+```powershell
+.\setup.ps1 -WithPmgAddons        # Windows
 ```
 
 ## 📋 Usage
@@ -96,7 +163,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 - **Frontend**: Vanilla JavaScript with Plotly.js
 - **Data Source**: Materials Project API
 - **Computation**: pymatgen for phase diagram calculations
-- **Containerization**: Docker with optimized Python 3.10 slim image
+- **Containerization**: Docker with a Python 3.13 slim image, dependencies installed into a dedicated virtual environment (`/opt/venv`)
 
 ### Computational Methodology
 
@@ -175,6 +242,9 @@ The phase diagram generation follows these computational steps:
 - `PORT`: Application port (default: 8000)
 - `HOST`: Application host (default: 0.0.0.0)
 
+The Materials Project API key is **never** read from the environment or stored on the
+server. It is supplied by the browser through the `X-API-KEY` header on every request.
+
 ### Docker Compose (Optional)
 
 ```yaml
@@ -191,12 +261,17 @@ services:
 
 ## 📝 Requirements
 
-- **Docker** (recommended) or Python 3.10+ with pip
+- **Docker** (recommended) or **Python 3.11+** with `venv` (3.10 and older are not supported
+  by the current `pymatgen` / `mp-api` / `emmet-core` releases)
 - **Materials Project API Key** (free registration required)
 - **Modern web browser** with JavaScript enabled
-- **System dependencies** (for manual installation): build-essential, gfortran, git, libblas-dev, liblapack-dev
+- **System dependencies** (for local installation): build-essential, gfortran, git, libblas-dev, liblapack-dev
 
 ## 🤝 Contributing
+
+Development conventions (language policy, virtual environment rules, coding and commit
+standards) are documented in [CLAUDE.md](CLAUDE.md). Please run `./test.sh` (or
+`.\test.ps1`) inside the virtual environment before opening a pull request.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -238,6 +313,41 @@ Users are responsible for:
 ## 🐛 Troubleshooting
 
 ### Common Installation Issues
+
+**`ModuleNotFoundError: No module named 'mp_api'` (or `httpx` / `pymatgen` import errors):**
+
+The command ran against the system Python instead of the project virtual environment.
+Use the wrapper scripts (`./run.sh`, `./test.sh`, `.\run.ps1`, `.\test.ps1`), activate the
+environment, or call the interpreter inside it explicitly:
+
+```bash
+# Linux / macOS
+venv/bin/python -m pytest
+```
+
+```powershell
+# Windows
+venv\Scripts\python.exe -m pytest
+```
+
+**Dependency resolution installs very old package versions:**
+
+Your interpreter is older than Python 3.11. Check with `python --version` and recreate the
+environment with a supported interpreter:
+
+```bash
+rm -rf venv && PYTHON_BIN=python3.13 ./setup.sh
+```
+
+```powershell
+Remove-Item -Recurse -Force venv; .\setup.ps1 -PythonBin python3.13
+```
+
+**`pmg config --install enumlib` fails:**
+
+These add-ons are optional and unnecessary for phase diagram generation. Skip them, or
+install them explicitly with `./setup.sh --with-pmg-addons` on a machine with a Fortran
+toolchain.
 
 **Docker not found:**
 ```bash

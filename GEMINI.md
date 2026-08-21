@@ -18,9 +18,9 @@
 
 ## 4. Technical Constraints & Architecture
 - **Frontend**: Do not introduce external CSS frameworks (such as TailwindCSS) unless requested. Stick to the existing Vanilla CSS and Single-Page Application (SPA) architecture.
-- **API Key Security**: Never hardcode the Materials Project API key. Always use browser localStorage (encrypted) or environment variables.
+- **API Key Security**: Never hardcode or server-side store the Materials Project API key. It is encrypted client-side (AES-GCM) in the browser and sent to the server only through the `X-API-KEY` header.
 - **Dependency Management**: Update [requirements.txt](file:///c:/Users/toshi/python/PhaseNavigator/requirements.txt) immediately when adding new libraries.
-- **Python Environment**: Always use the Python virtual environment (`venv`) located in the root directory. Installing dependencies, running tests, and starting the application must be executed within this `venv` environment.
+- **Python Environment**: Always use the Python virtual environment (`venv`) located in the root directory (Python 3.11+ required). Installing dependencies, running tests, and starting the application must be executed within this `venv` environment - use the wrapper scripts (`setup`, `run`, `test` in `.sh` and `.ps1` variants) or the interpreter inside `venv`. See [CLAUDE.md](CLAUDE.md) for the full rule set.
 
 ## 5. AI Assistant Operational Constraints
 - **Validation**: Verify changes by launching the backend server and running manual checks if applicable.

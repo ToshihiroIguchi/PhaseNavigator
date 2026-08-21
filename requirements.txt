@@ -1,11 +1,21 @@
-fastapi
-uvicorn[standard]
-pymatgen
-mp-api
-jinja2
-plotly
-python-multipart
-cryptography
-pydantic-settings
-pytest
-httpx
+# Runtime dependencies.
+# Install inside the project virtual environment only:
+#   python -m venv venv && venv/bin/pip install -r requirements.txt   (Linux/macOS)
+#   python -m venv venv; .\venv\Scripts\pip install -r requirements.txt  (Windows)
+#
+# Lower bounds match the versions this project is verified against.
+# pymatgen / mp-api / emmet-core require Python 3.11 or newer.
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pymatgen>=2026.5.4
+mp-api>=0.46.4
+jinja2>=3.1.6
+plotly>=6.0.0
+python-multipart>=0.0.20
+cryptography>=44.0.0
+pydantic>=2.10.0
+pydantic-settings>=2.7.0
+
+# Test dependencies (httpx is required by starlette.testclient)
+pytest>=8.3.0
+httpx>=0.28.0
