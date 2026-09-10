@@ -61,6 +61,17 @@ def test_form_diagram_request_conversion():
     assert api_request.functional == "R2SCAN"
 
 
+def test_diagram_request_default_functional():
+    """Test that DiagramRequest and FormDiagramRequest default to GGA_GGA_U."""
+    request = DiagramRequest(f=["Fe2O3", "Al2O3"])
+    assert request.functional == "GGA_GGA_U"
+
+    form_request = FormDiagramRequest(formulas="Fe2O3, Al2O3")
+    assert form_request.functional == "GGA_GGA_U"
+    converted = form_request.to_diagram_request()
+    assert converted.functional == "GGA_GGA_U"
+
+
 def test_phase_info_model():
     """Test PhaseInfo model."""
     phase = PhaseInfo(

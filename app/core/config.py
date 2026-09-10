@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     rate_limit_max_requests: int = 10
     
     # Phase Diagram
-    default_functional: str = "GGA_GGA_U_R2SCAN"
+    default_functional: str = "GGA_GGA_U"
     supported_functionals: List[str] = ["GGA_GGA_U_R2SCAN", "R2SCAN", "GGA_GGA_U"]
     
     # Temperature constraints
