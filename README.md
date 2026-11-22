@@ -132,6 +132,7 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 4. **Set Parameters**: 
    - Choose temperature (0 K for ground state, or 300-2000 K for finite temperature)
    - Adjust energy cutoff for unstable phases (default: 0.2 eV/atom)
+   - Optionally enable **Include non-commercial data**. By default, entries under non-commercial terms (CC BY-NC 4.0, such as GNoME-derived materials that appear with R2SCAN) are excluded so results use CC BY 4.0 data only; the result summary shows how many entries were excluded. Enabling the option can change the convex hull, and the output may then be used for non-commercial purposes only.
 5. **Generate Diagram**: Click "Generate Phase Diagram" and wait for the elapsed-time indicator to finish (quaternary systems can take up to about a minute)
 6. **Explore Results**: Interactive phase diagram with temperature and energy cutoff displayed
 

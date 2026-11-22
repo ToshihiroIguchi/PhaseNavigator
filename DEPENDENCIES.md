@@ -36,7 +36,9 @@ Data from the Materials Project is subject to the Materials Project Terms of Use
 - The data is licensed under CC BY 4.0: give appropriate credit, provide a link to the license, and indicate
   if changes were made (the footer of the app does this)
 - GNoME-derived data (Graph Networks for Materials Exploration Database) is licensed under CC BY-NC 4.0 and is
-  "only licensed for non-commercial use"; users of that data are asked to cite Merchant et al., Nature, 2023
+  "only licensed for non-commercial use"; users of that data are asked to cite Merchant et al., Nature, 2023.
+  The app excludes entries whose Materials Project license is `BY-NC` (or whose batch is GNoME) by default and
+  includes them only when the user enables "Include non-commercial data"
 - Cite Horton et al., Nature Materials (2025) and Jain et al., APL Materials 1, 011002 (2013); tool-specific
   papers are listed on the Materials Project "How to Cite" page
 - Do not scrape the website, be mindful of API usage, and do not share an API key among multiple users or in public
