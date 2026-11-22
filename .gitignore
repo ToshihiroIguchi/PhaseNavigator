@@ -48,3 +48,6 @@ start*.txt
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Generated static edition (built by scripts/build_static_site.py; contains downloaded data)
+/static_site/
