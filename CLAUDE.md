@@ -68,6 +68,13 @@ Guidance for Claude Code (and any AI assistant) working in this repository.
 - **API key security**: never hardcode or server-side store the Materials Project
   API key. The key is encrypted client-side (AES-GCM) and stored in the browser;
   the server accepts it only through the `X-API-KEY` header.
+- **Static edition**: the static site (`scripts/build_static_site.py`, `phasecore/`)
+  needs no API key; its data is downloaded in advance with
+  `scripts/build_static_data.py`. Read the key for that script only from an
+  environment variable or a file outside the repository, and never print or log it.
+  Keep the downloaded data (`static_site/`) out of Git, include only CC BY 4.0
+  materials (never GNoME / CC BY-NC), and keep `phasecore` free of pymatgen so it
+  runs in Pyodide.
 - **Breaking changes**: do not change existing major API routes (such as `/diagram`)
   without user approval.
 
