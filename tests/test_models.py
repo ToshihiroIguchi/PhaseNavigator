@@ -104,3 +104,13 @@ def test_diagram_metadata_model():
     assert metadata.temperature == 300
     assert metadata.elements == ["Fe", "O", "Al"]
     assert metadata.num_phases == 5
+
+def test_include_non_commercial_defaults_to_false():
+    """Non-commercial data is opt-in for both request models."""
+    from app.models.requests import DiagramRequest, FormDiagramRequest
+
+    assert DiagramRequest(f=["Fe2O3", "Al2O3"]).include_non_commercial is False
+    form = FormDiagramRequest(formulas="Fe2O3, Al2O3")
+    assert form.to_diagram_request().include_non_commercial is False
+    opted_in = FormDiagramRequest(formulas="Fe2O3, Al2O3", include_non_commercial=True)
+    assert opted_in.to_diagram_request().include_non_commercial is True

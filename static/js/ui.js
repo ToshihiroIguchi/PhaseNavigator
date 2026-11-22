@@ -22,6 +22,7 @@ class UIManager {
       apiKeyStatus: document.getElementById('api-key-status'),
       eCutInput: document.getElementById('e-cut'),
       functionalSelect: document.getElementById('functional'),
+      nonCommercialToggle: document.getElementById('include-non-commercial'),
       
       // Temperature controls
       tempToggle: document.getElementById('temp-toggle'),
@@ -418,6 +419,11 @@ class UIManager {
       'Some entries include empirical energy corrections (Materials Project compatibility scheme).' :
       'No empirical energy corrections were applied to these entries.';
     
+    const excluded = metadata.excluded_non_commercial || 0;
+    const licenseNote = metadata.include_non_commercial ?
+      'Non-commercial (CC BY-NC 4.0) entries may be included. Use for non-commercial purposes only.' :
+      `CC BY 4.0 data only (${excluded} non-commercial ${excluded === 1 ? 'entry' : 'entries'} excluded).`;
+
     const summaryLine = (label, text) => {
       const strong = document.createElement('strong');
       strong.textContent = `${label} `;
@@ -430,7 +436,9 @@ class UIManager {
         `Energy cutoff = ${metadata.e_cut || 0} eV/atom`
       ),
       document.createElement('br'),
-      ...summaryLine('Energy Corrections:', correctionNote)
+      ...summaryLine('Energy Corrections:', correctionNote),
+      document.createElement('br'),
+      ...summaryLine('Data License:', licenseNote)
     );
     
     // Clear existing table rows
@@ -480,6 +488,7 @@ class UIManager {
       const eCut = parseFloat(this.elements.eCutInput.value) || 0.2;
       const functional = this.elements.functionalSelect.value;
       const temperature = parseInt(this.elements.finalTempInput.value, 10) || 0;
+      const includeNonCommercial = this.elements.nonCommercialToggle.checked;
 
       if (!apiKey) {
         throw new Error('Materials Project API key is required');
@@ -499,7 +508,8 @@ class UIManager {
         f: formulas,
         temp: temperature,
         e_cut: eCut,
-        functional: functional
+        functional: functional,
+        include_non_commercial: includeNonCommercial
       };
 
       const response = await generatePhaseDiagram(requestData, apiKey);

@@ -110,6 +110,17 @@
   </div>
   <small class="hint" id="e-cut-hint">The energy cutoff also plots unstable phases up to this energy above the hull. The table lists stable phases only.</small>
 
+  <!-- Non-commercial data (GNoME) is excluded unless this is switched on -->
+  <div class="toggle-container">
+    <span class="toggle-switch">
+      <input type="checkbox" id="include-non-commercial" role="switch"
+             aria-describedby="non-commercial-hint">
+      <span class="slider"></span>
+    </span>
+    <label class="toggle-label" for="include-non-commercial">Include non-commercial data (GNoME, CC BY-NC 4.0)</label>
+  </div>
+  <small class="hint" id="non-commercial-hint">Off by default. GNoME-derived entries may be used for non-commercial purposes only.</small>
+
   <!-- Hidden input for final temperature value -->
   <input type="hidden" id="temp" name="temp" value="{{ temp or 0 }}">
 

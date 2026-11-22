@@ -157,6 +157,7 @@ async def diagram_form(
     temp: str = Form("0"),
     e_cut: float = Form(settings.default_energy_cutoff),
     functional: str = Form(settings.default_functional),
+    include_non_commercial: bool = Form(False),
 ):
     """
     Handle form-based diagram requests (for HTML form compatibility).
@@ -170,7 +171,8 @@ async def diagram_form(
             formulas=formulas,
             temp=temp,
             e_cut=e_cut,
-            functional=functional
+            functional=functional,
+            include_non_commercial=include_non_commercial
         )
         
         # Convert to API request format for validation

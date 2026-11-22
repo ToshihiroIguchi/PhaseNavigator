@@ -24,6 +24,8 @@ class DiagramMetadata(BaseModel):
     e_cut: float
     functional: str
     num_phases: int
+    excluded_non_commercial: int = 0
+    include_non_commercial: bool = False
 
 
 class DiagramResponse(BaseModel):

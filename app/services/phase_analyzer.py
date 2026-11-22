@@ -172,13 +172,41 @@ class PhaseAnalyzer:
         
         return 'Unknown'
     
+    @staticmethod
+    def _check_terminals_present(
+        formulas: List[str],
+        terminals: List[Composition],
+        entries: List[ComputedEntry]
+    ) -> None:
+        """
+        Make sure every terminal formula still has an entry of its own composition.
+
+        Args:
+            formulas: Formulas as entered by the user.
+            terminals: The same formulas as compositions.
+            entries: Entries that remain after license filtering.
+
+        Raises:
+            ValueError: If a terminal has no entry (non-commercial entries were removed).
+        """
+        for formula, terminal in zip(formulas, terminals):
+            if not any(
+                entry.composition.reduced_composition.almost_equals(terminal.reduced_composition)
+                for entry in entries
+            ):
+                raise ValueError(
+                    f"No CC BY 4.0 entry found for '{formula}'. "
+                    "Enable non-commercial data to include GNoME entries."
+                )
+
     def generate_phase_diagram(
         self,
         formulas: List[str],
         temperature: int,
         energy_cutoff: float,
         functional: str,
-        api_key: str
+        api_key: str,
+        include_non_commercial: bool = False
     ) -> DiagramResponse:
         """
         Generate phase diagram and extract phase information.
@@ -189,9 +217,14 @@ class PhaseAnalyzer:
             energy_cutoff: Energy cutoff for unstable phases
             functional: DFT functional type
             api_key: Materials Project API key
+            include_non_commercial: Keep non-commercial (CC BY-NC, e.g. GNoME) entries
             
         Returns:
             Complete diagram response with plot and phase info
+
+        Raises:
+            ValueError: On invalid input, API errors, or when excluding
+                non-commercial data leaves a terminal formula without any entry.
         """
         logger.info(f"Generating phase diagram for {formulas} at {temperature}K")
         
@@ -199,10 +232,14 @@ class PhaseAnalyzer:
         elements = self.materials_client.get_elements_from_formulas(formulas)
         
         # Fetch entries from Materials Project
-        entries = self.materials_client.fetch_entries(elements, temperature, functional)
+        entries, excluded = self.materials_client.fetch_entries(
+            elements, temperature, functional, include_non_commercial
+        )
         
         # Build phase diagram
         terminals = [Composition(f) for f in formulas]
+        if excluded:
+            self._check_terminals_present(formulas, terminals, entries)
         phase_diagram = CompoundPhaseDiagram(
             entries,
             terminals,
@@ -226,7 +263,9 @@ class PhaseAnalyzer:
             elements=elements,
             e_cut=energy_cutoff,
             functional=functional,
-            num_phases=len(phase_info)
+            num_phases=len(phase_info),
+            excluded_non_commercial=excluded,
+            include_non_commercial=include_non_commercial
         )
         
         logger.info(f"Phase diagram generated successfully with {len(phase_info)} phases")

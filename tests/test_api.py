@@ -98,3 +98,39 @@ def test_plotly_js_is_served_locally():
     page = client.get("/")
     assert b"/vendor/plotly.min.js" in page.content
     assert b"cdn.plot.ly" not in page.content
+
+
+def _fake_diagram_response():
+    from app.models.responses import DiagramMetadata, DiagramResponse
+
+    return DiagramResponse(
+        plot={"data": [], "layout": {}},
+        phase_info=[],
+        metadata=DiagramMetadata(
+            temperature=0, elements=["Fe", "O"], e_cut=0.2,
+            functional="GGA_GGA_U", num_phases=0,
+        ),
+    )
+
+
+@pytest.mark.parametrize("payload_extra, expected", [({}, False), ({"include_non_commercial": True}, True)])
+def test_diagram_endpoint_passes_non_commercial_flag(payload_extra, expected):
+    """The flag defaults to False and is forwarded to the analyzer when set."""
+    payload = {"f": ["Fe2O3", "Al2O3"], **payload_extra}
+    with patch("app.api.diagrams.PhaseAnalyzer") as analyzer_cls:
+        analyzer_cls.return_value.generate_phase_diagram.return_value = _fake_diagram_response()
+        response = client.post(
+            "/api/diagrams/", json=payload,
+            headers={"X-API-KEY": "abcdefghijklmnopqrstuvwxyz123456"},
+        )
+
+    assert response.status_code == 200
+    kwargs = analyzer_cls.return_value.generate_phase_diagram.call_args.kwargs
+    assert kwargs["include_non_commercial"] is expected
+
+
+def test_index_page_has_non_commercial_toggle_off_by_default():
+    """The opt-in switch is present and not pre-checked."""
+    html = client.get("/").text
+    assert 'id="include-non-commercial"' in html
+    assert "checked" not in html.split('id="include-non-commercial"')[1].split(">")[0]

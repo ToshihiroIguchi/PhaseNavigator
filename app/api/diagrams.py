@@ -57,6 +57,7 @@ async def generate_diagram(
     # Log request details
     logger.info(f"API Request: formulas={request.formulas}, T={request.temperature}K, "
                f"e_cut={request.energy_cutoff}, functional={request.functional}, "
+               f"non_commercial={request.include_non_commercial}, "
                f"key_hash={api_key_hash}, IP={client_ip}")
     
     try:
@@ -70,7 +71,8 @@ async def generate_diagram(
             temperature=request.temperature,
             energy_cutoff=request.energy_cutoff,
             functional=request.functional,
-            api_key=x_api_key
+            api_key=x_api_key,
+            include_non_commercial=request.include_non_commercial
         )
         
         logger.info(f"Diagram generated successfully: {len(result.phase_info)} phases")

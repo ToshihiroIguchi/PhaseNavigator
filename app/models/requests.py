@@ -31,6 +31,10 @@ class DiagramRequest(BaseModel):
         default=settings.default_functional,
         description="DFT functional type"
     )
+    include_non_commercial: bool = Field(
+        default=False,
+        description="Include non-commercial (CC BY-NC, e.g. GNoME) data"
+    )
     
     @field_validator('temperature')
     @classmethod
@@ -70,6 +74,7 @@ class FormDiagramRequest(BaseModel):
     temp: str = Field(default="0", description="Temperature as string")
     e_cut: float = Field(default=settings.default_energy_cutoff, description="Energy cutoff")
     functional: str = Field(default=settings.default_functional, description="DFT functional")
+    include_non_commercial: bool = Field(default=False, description="Include CC BY-NC data")
     
     def to_diagram_request(self) -> DiagramRequest:
         """Convert form request to API request format."""
@@ -86,5 +91,6 @@ class FormDiagramRequest(BaseModel):
             f=formula_list,
             temp=temp_int,
             e_cut=self.e_cut,
-            functional=self.functional
+            functional=self.functional,
+            include_non_commercial=self.include_non_commercial
         )

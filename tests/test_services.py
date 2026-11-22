@@ -95,7 +95,7 @@ def test_generated_plot_uses_formulas_not_dummy_species():
 
     client = Mock()
     client.get_elements_from_formulas.return_value = ["Al", "Fe", "O"]
-    client.fetch_entries.return_value = _build_offline_entries()
+    client.fetch_entries.return_value = (_build_offline_entries(), 0)
 
     result = PhaseAnalyzer(client).generate_phase_diagram(
         formulas=["Fe2O3", "Al2O3"],
@@ -120,3 +120,137 @@ def test_replace_dummy_labels_is_recursive():
         "a": ["Fraction Al2O3", 1, None],
         "b": {"c": "Fe2O3 and Al2O3"},
     }
+
+
+# ---------- Non-commercial (CC BY-NC) data handling ----------
+
+@pytest.mark.parametrize("entry_id, expected", [
+    ("mp-1143-r2SCAN", "mp-1143"),
+    ("mp-31770-GGA+U", "mp-31770"),
+    ("mp-776475-GGA", "mp-776475"),
+    ("mp-3222016", "mp-3222016"),
+    ("mvc-12345-r2SCAN", "mvc-12345"),
+])
+def test_base_material_id_strips_functional_suffix(entry_id, expected):
+    """The functional suffix is removed so IDs match Materials Project documents."""
+    from app.services.materials_client import base_material_id
+
+    assert base_material_id(entry_id) == expected
+
+
+def test_subsystem_chemsys_lists_all_subsystems():
+    """Every non-empty element subset is returned, sorted."""
+    from app.services.materials_client import subsystem_chemsys
+
+    assert sorted(subsystem_chemsys(["O", "Fe"])) == ["Fe", "Fe-O", "O"]
+    assert len(subsystem_chemsys(["A", "B", "C", "D"])) == 15
+
+
+def _license_doc(material_id, license_name, batch_id=None):
+    """Build a fake summary document carrying builder_meta."""
+    doc = Mock()
+    doc.material_id = material_id
+    doc.builder_meta = Mock(license=license_name, batch_id=batch_id)
+    return doc
+
+
+def _client_with_mock_mp(entries, license_docs=None, license_error=None):
+    """Return a MaterialsProjectClient whose MPRester is replaced by a mock."""
+    from pymatgen.core import Composition
+    from pymatgen.entries.computed_entries import ComputedEntry
+
+    built = [
+        ComputedEntry(Composition(formula), -5.0, entry_id=entry_id)
+        for formula, entry_id in entries
+    ]
+    mp = Mock()
+    mp.__enter__ = Mock(return_value=mp)
+    mp.__exit__ = Mock(return_value=False)
+    mp.get_entries_in_chemsys.return_value = built
+    if license_error is not None:
+        mp.materials.search.side_effect = license_error
+    else:
+        mp.materials.search.return_value = license_docs or []
+    client = MaterialsProjectClient("dummy_key")
+    client._client = mp
+    return client, mp
+
+
+ENTRIES = [("Fe", "mp-1-GGA"), ("O", "mp-2-GGA"), ("Fe2O3", "mp-3-r2SCAN"), ("FeO", "mp-4-r2SCAN")]
+
+
+def test_fetch_entries_excludes_non_commercial_by_default():
+    """BY-NC and GNoME materials are removed and counted."""
+    docs = [
+        _license_doc("mp-3", "BY-NC", "gnome_r2scan_statics"),
+        _license_doc("mp-4", "BY-C"),
+    ]
+    client, _ = _client_with_mock_mp(ENTRIES, docs)
+
+    entries, excluded = client.fetch_entries(["Fe", "O"], 0, "R2SCAN")
+
+    assert excluded == 1
+    assert {str(e.entry_id) for e in entries} == {"mp-1-GGA", "mp-2-GGA", "mp-4-r2SCAN"}
+
+
+def test_fetch_entries_can_include_non_commercial():
+    """With the opt-in flag nothing is removed and no license lookup is made."""
+    client, mp = _client_with_mock_mp(ENTRIES, [_license_doc("mp-3", "BY-NC")])
+
+    entries, excluded = client.fetch_entries(["Fe", "O"], 0, "R2SCAN", include_non_commercial=True)
+
+    assert excluded == 0
+    assert len(entries) == 4
+    mp.materials.search.assert_not_called()
+
+
+def test_fetch_entries_fails_closed_when_license_lookup_fails():
+    """If licenses cannot be checked, the request fails instead of returning unchecked data."""
+    client, _ = _client_with_mock_mp(ENTRIES, license_error=RuntimeError("boom"))
+
+    with pytest.raises(ValueError, match="Could not verify data licenses"):
+        client.fetch_entries(["Fe", "O"], 0, "R2SCAN")
+
+
+def test_fetch_entries_applies_to_gibbs_entries():
+    """Finite-temperature requests are filtered with the same ID matching."""
+    docs = [_license_doc("mp-3", "BY-NC")]
+    client, mp = _client_with_mock_mp(ENTRIES, docs)
+
+    entries, excluded = client.fetch_entries(["Fe", "O"], 1000, "R2SCAN")
+
+    assert excluded == 1
+    assert mp.get_entries_in_chemsys.call_args.kwargs["use_gibbs"] == 1000
+
+
+def test_missing_terminal_after_exclusion_gives_clear_error():
+    """If the only entry of a terminal formula was non-commercial, say so."""
+    from app.services.phase_analyzer import PhaseAnalyzer
+
+    client = Mock()
+    client.get_elements_from_formulas.return_value = ["Al", "Fe", "O"]
+    entries = [e for e in _build_offline_entries() if e.composition.reduced_formula != "Al2O3"]
+    client.fetch_entries.return_value = (entries, 1)
+
+    with pytest.raises(ValueError, match="No CC BY 4.0 entry found for 'Al2O3'"):
+        PhaseAnalyzer(client).generate_phase_diagram(
+            formulas=["Fe2O3", "Al2O3"], temperature=0, energy_cutoff=0.2,
+            functional="GGA_GGA_U", api_key="unused",
+        )
+
+
+def test_metadata_reports_license_filtering():
+    """The response says how many non-commercial entries were excluded."""
+    from app.services.phase_analyzer import PhaseAnalyzer
+
+    client = Mock()
+    client.get_elements_from_formulas.return_value = ["Al", "Fe", "O"]
+    client.fetch_entries.return_value = (_build_offline_entries(), 3)
+
+    result = PhaseAnalyzer(client).generate_phase_diagram(
+        formulas=["Fe2O3", "Al2O3"], temperature=0, energy_cutoff=0.2,
+        functional="GGA_GGA_U", api_key="unused",
+    )
+
+    assert result.metadata.excluded_non_commercial == 3
+    assert result.metadata.include_non_commercial is False
