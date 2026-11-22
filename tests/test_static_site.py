@@ -32,17 +32,29 @@ def test_page_has_no_api_key_or_non_commercial_controls(built):
 
 
 def test_page_uses_relative_assets_and_a_pinned_pyodide(built):
-    """Assets are relative so the folder works under any URL prefix."""
+    """Assets are relative; Pyodide is pinned and loaded (with its hash) by the worker, not the page."""
     html = (built[0] / "index.html").read_text(encoding="utf-8")
 
     assert 'src="/' not in html and 'href="/static' not in html
     assert 'src="static/js/static_engine.js' in html
     assert 'src="vendor/plotly.min.js' in html
-    assert f'src="{site.PYODIDE_URL}pyodide.js"' in html
-    assert f'integrity="{site.PYODIDE_SRI}"' in html
-    for name in ("utils.js", "api.js", "static_engine.js", "ui.js"):
+    assert f'data-pyodide-url="{site.PYODIDE_URL}"' in html
+    assert f'data-pyodide-sri="{site.PYODIDE_SRI}"' in html
+    assert 'data-worker-url="static/js/calc_worker.js' in html
+    assert "pyodide.js" not in html  # the page itself does not load the loader
+    for name in ("utils.js", "api.js", "static_engine.js", "calc_worker.js", "ui.js"):
         assert (built[0] / "static" / "js" / name).is_file()
     assert (built[0] / "vendor" / "plotly.min.js").stat().st_size > 1_000_000
+
+
+def test_worker_checks_the_loader_hash_and_the_site_ships_its_own_server(built):
+    """The worker verifies pyodide.mjs against the pinned hash; the folder carries a stdlib-only server."""
+    worker = (built[0] / "static" / "js" / "calc_worker.js").read_text(encoding="utf-8")
+
+    assert "integrity: sri" in worker and "pyodide.mjs" in worker
+    assert (built[0] / "serve_static.py").read_text(encoding="utf-8") == (
+        site.ROOT / "scripts" / "serve_static.py"
+    ).read_text(encoding="utf-8")
 
 
 def test_missing_data_is_reported_as_a_warning(built):
