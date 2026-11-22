@@ -23,7 +23,7 @@ This project uses the following third-party libraries and services:
 
 | Service | Terms | Purpose |
 |---------|-------|---------|
-| Materials Project API | Academic/Research Use | Materials data |
+| Materials Project API | Data: CC BY 4.0. GNoME-derived entries: CC BY-NC 4.0 (non-commercial only) | Materials data |
 
 ## License Compatibility
 
@@ -31,11 +31,16 @@ All dependencies are compatible with the MIT license of this project.
 
 ## Materials Project Data Usage
 
-Data from the Materials Project is subject to their terms of service:
-- Academic and research use is encouraged
-- Commercial use may require separate licensing
-- Proper citation is required in publications
-- Users must comply with Materials Project's acceptable use policy
+Data from the Materials Project is subject to the Materials Project Terms of Use
+(checked against the published terms and the "How to Cite" page):
+- The data is licensed under CC BY 4.0: give appropriate credit, provide a link to the license, and indicate
+  if changes were made (the footer of the app does this)
+- GNoME-derived data (Graph Networks for Materials Exploration Database) is licensed under CC BY-NC 4.0 and is
+  "only licensed for non-commercial use"; users of that data are asked to cite Merchant et al., Nature, 2023
+- Cite Horton et al., Nature Materials (2025) and Jain et al., APL Materials 1, 011002 (2013); tool-specific
+  papers are listed on the Materials Project "How to Cite" page
+- Do not scrape the website, be mindful of API usage, and do not share an API key among multiple users or in public
+- Contact the Materials Project for guidance before re-packaging and publicly re-distributing its data
 
 ## Compliance Notes
 
