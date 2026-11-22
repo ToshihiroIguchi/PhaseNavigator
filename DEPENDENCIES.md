@@ -52,13 +52,21 @@ Data from the Materials Project is subject to the Materials Project Terms of Use
 - Cite Horton et al., Nature Materials (2025) and Jain et al., APL Materials 1, 011002 (2013); tool-specific
   papers are listed on the Materials Project "How to Cite" page
 - Do not scrape the website, be mindful of API usage, and do not share an API key among multiple users or in public
-- Contact the Materials Project for guidance before re-packaging and publicly re-distributing its data
+- The Terms of Use list, among the things users agree to, to "contact us for guidance about appropriate
+  acknowledgements before re-packaging and publicly re-distributing Materials Project data". The same terms
+  state that the content "may be copied, distributed, transmitted, and adapted without obtaining specific
+  permission from the Materials Project, provided that proper attribution is given ... and changes (if any)
+  are indicated". The contact request therefore concerns acknowledgements and applies to public
+  redistribution; it is not a permission gate. This is our reading of the terms, not legal advice
+- Data on the Materials Project AWS Open Data buckets is subject to the same terms
 
 ## Compliance Notes
 
 - The repository does not contain Materials Project data. The server edition accesses data through the
   official API only, with no caching
 - The static edition needs data files that you download yourself with `scripts/build_static_data.py` (CC BY 4.0
-  materials only; unknown licenses are excluded). They are git-ignored. Before publishing a site that
-  contains them, check the Materials Project terms and contact the Materials Project, as noted above
+  materials only; unknown licenses are excluded). They are git-ignored. Serving the site to a limited group
+  (for example inside a LAN) needs attribution and a statement of changes, which the page footer provides.
+  Before putting a site that contains them on the public internet, contact the Materials Project about
+  acknowledgements, as noted above
 - Users are responsible for complying with all applicable terms of service

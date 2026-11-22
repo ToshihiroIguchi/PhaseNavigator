@@ -160,9 +160,23 @@ Use the project virtual environment's Python (`venv\Scripts\python.exe` / `venv/
 - `--elements` (at most 9) downloads those elements and all their subsystems; a diagram can only use those elements. `--all` downloads everything and takes a long time (about 150,000-180,000 entries per thermo type); Materials Project also publishes bulk data on AWS Open Data.
 - Materials whose license is not CC BY (for example GNoME) or cannot be determined are left out.
 - The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
-- The data files and `static_site/` are git-ignored. **Before publishing a site that contains Materials Project data, check the Materials Project terms and contact them** (see `DEPENDENCIES.md`).
+- The data files and `static_site/` are git-ignored. The Materials Project data is CC BY 4.0: the page footer gives the credit, the license link and the statement of changes. The terms ask you to **contact the Materials Project about acknowledgements before publicly re-distributing** the data, so do that before putting such a site on the public internet (see `DEPENDENCIES.md`).
 - `tests/test_phasecore.py` compares `phasecore` with the pymatgen server code path (stable phases, energies, finite temperature including gases, up to four terminals).
 - Known differences from the server edition: the figures are drawn by `phasecore` rather than pymatgen's `PDPlotter` (same style, not identical); when several polymorphs have the same energy (for example experimental gas data), the static edition picks the lowest entry ID deterministically.
+
+### Sharing inside a LAN
+
+Two ways to let a limited group use the app without publishing the data. Neither sends the Materials Project data to the public internet.
+
+| Option | What users receive | API key |
+|--------|--------------------|---------|
+| Server edition (`.un.ps1` / `./run.sh`, listens on `0.0.0.0:8000`) | Only the calculated diagram; data is fetched with the user's own key and never stored | Each user needs their own free key (keys must not be shared) |
+| Static edition (`python -m http.server --directory static_site 8080 --bind 0.0.0.0`) | The data files are downloaded by every browser that opens the page | Not needed |
+
+- Allow the port in the firewall for the LAN only (Windows: an inbound rule limited to the private profile).
+- Over plain HTTP inside a LAN the API key of the server edition travels unencrypted. Use a trusted network or put an HTTPS reverse proxy in front.
+- The static edition hands the data itself to the users. CC BY 4.0 allows this with attribution, but keep it to the group you intend and never include non-commercial (GNoME) data.
+- The server edition runs every calculation on the server; a quaternary system can take about a minute, so many simultaneous users will be slow.
 
 ## 🛠️ Technical Details
 
