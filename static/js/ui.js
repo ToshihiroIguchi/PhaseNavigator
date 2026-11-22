@@ -17,6 +17,9 @@ class UIManager {
       // Form elements
       formulasInput: document.getElementById('formulas'),
       apiInput: document.getElementById('api-key'),
+      apiKeyToggle: document.getElementById('api-key-toggle'),
+      apiKeyClear: document.getElementById('api-key-clear'),
+      apiKeyStatus: document.getElementById('api-key-status'),
       eCutInput: document.getElementById('e-cut'),
       functionalSelect: document.getElementById('functional'),
       
@@ -68,6 +71,8 @@ class UIManager {
     
     // API key management
     this.elements.apiInput.addEventListener('input', debounce(() => this.handleApiKeyChange(), 500));
+    this.elements.apiKeyToggle.addEventListener('click', () => this.toggleApiKeyVisibility());
+    this.elements.apiKeyClear.addEventListener('click', () => this.handleApiKeyClear());
     
     // Form input changes
     this.elements.formulasInput.addEventListener('input', () => this.handleFormInputChange());
@@ -90,7 +95,32 @@ class UIManager {
     const restoredKey = await restoreApiKey();
     if (restoredKey && this.elements.apiInput) {
       this.elements.apiInput.value = restoredKey;
+      this.setApiKeyStatus('Loaded from this browser (encrypted)');
     }
+  }
+
+  /**
+   * Show a short status line under the API key field.
+   * @param {string} text - Message, or an empty string to clear it.
+   */
+  setApiKeyStatus(text) {
+    this.elements.apiKeyStatus.textContent = text;
+  }
+
+  /** Switch the API key field between masked and visible text. */
+  toggleApiKeyVisibility() {
+    const input = this.elements.apiInput;
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    this.elements.apiKeyToggle.textContent = show ? 'Hide key' : 'Show key';
+    this.elements.apiKeyToggle.setAttribute('aria-pressed', String(show));
+  }
+
+  /** Forget the stored key and empty the field. */
+  async handleApiKeyClear() {
+    await clearApiKey();
+    this.elements.apiInput.value = '';
+    this.setApiKeyStatus('Saved key removed from this browser');
   }
 
   updateTemperatureControls() {
@@ -237,12 +267,16 @@ class UIManager {
 
   async handleApiKeyChange() {
     const apiKey = this.elements.apiInput.value.trim();
-    if (apiKey) {
-      if (isValidApiKey(apiKey)) {
-        await saveApiKey(apiKey);
-      }
+    if (!apiKey) {
+      await clearApiKey();
+      this.setApiKeyStatus('');
+      return;
+    }
+    if (isValidApiKey(apiKey)) {
+      const saved = await saveApiKey(apiKey);
+      this.setApiKeyStatus(saved ? 'Saved in this browser (encrypted)' : 'Could not save the key in this browser');
     } else {
-      localStorage.removeItem('mp_api_key_encrypted');
+      this.setApiKeyStatus('Key format looks invalid (letters and digits only, 20+ characters)');
     }
   }
 
@@ -370,8 +404,6 @@ class UIManager {
   }
 
   displayPhaseInformation(phaseInfo, metadata) {
-    console.log('📊 Displaying phase information:', phaseInfo);
-    
     // Show the container
     this.elements.phaseInfoContainer.style.display = 'block';
     
@@ -430,7 +462,7 @@ class UIManager {
       this.elements.phaseTableBody.appendChild(row);
     });
     
-    console.log('✅ Phase information table displayed');
+    console.log('Phase information table displayed');
   }
 
   /**
@@ -482,6 +514,8 @@ class UIManager {
       }
 
       this.elements.emptyState.hidden = true;
+      // The container must be visible before Plotly measures it.
+      this.elements.plotDiv.hidden = false;
       Plotly.purge(this.elements.plotDiv);
       Plotly.newPlot(this.elements.plotDiv, plotData.data, plotData.layout, {
         responsive: true,
@@ -509,5 +543,5 @@ class UIManager {
 let uiManager;
 document.addEventListener('DOMContentLoaded', () => {
   uiManager = new UIManager();
-  console.log('✅ UI Manager initialized');
+  console.log('UI Manager initialized');
 });

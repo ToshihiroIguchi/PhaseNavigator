@@ -8,9 +8,7 @@ const ICON_PATHS = {
     'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z',
     'M12 9v4',
     'M12 17h.01'
-  ],
-  table: ['M3 5h18v14H3z', 'M3 10h18', 'M9 5v14'],
-  info: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 16v-4', 'M12 8h.01']
+  ]
 };
 
 /**
@@ -77,6 +75,7 @@ async function getCryptoKey() {
     request.onerror = () => reject(request.error);
     request.onsuccess = async () => {
       if (request.result) {
+        db.close(); // Release the connection so the database can be deleted later
         resolve(request.result);
       } else {
         try {
@@ -89,8 +88,16 @@ async function getCryptoKey() {
           const writeTx = db.transaction(STORE_NAME, 'readwrite');
           const writeStore = writeTx.objectStore(STORE_NAME);
           writeStore.put(key, KEY_NAME);
-          resolve(key);
+          writeTx.oncomplete = () => {
+            db.close();
+            resolve(key);
+          };
+          writeTx.onerror = () => {
+            db.close();
+            reject(writeTx.error);
+          };
         } catch (e) {
+          db.close();
           reject(e);
         }
       }
@@ -156,15 +163,43 @@ async function decryptApiKey(encryptedStr) {
 }
 
 // API key management (async versions)
+
+/**
+ * Encrypt the API key and store it in this browser.
+ * @param {string} apiKey - Plain text Materials Project API key.
+ * @returns {Promise<boolean>} True if the key was stored.
+ */
 async function saveApiKey(apiKey) {
-  if (!apiKey) return;
+  if (!apiKey) return false;
   try {
     const encrypted = await encryptApiKey(apiKey);
+    if (!encrypted) return false;
     localStorage.setItem('mp_api_key_encrypted', encrypted);
-    console.log('✅ API key saved securely using AES-GCM');
+    return true;
   } catch (error) {
-    console.error('❌ Failed to save API key:', error);
+    console.error('Failed to save API key:', error);
+    return false;
   }
+}
+
+/**
+ * Remove the stored (encrypted) API key and the encryption key from this browser.
+ * @returns {Promise<void>} Resolves once both stores have been cleared.
+ */
+async function clearApiKey() {
+  try {
+    localStorage.removeItem('mp_api_key_encrypted');
+  } catch (error) {
+    console.error('Failed to remove stored API key:', error);
+  }
+  await new Promise((resolve) => {
+    try {
+      const request = indexedDB.deleteDatabase(DB_NAME);
+      request.onsuccess = request.onerror = request.onblocked = () => resolve();
+    } catch (error) {
+      resolve();
+    }
+  });
 }
 
 async function restoreApiKey() {
@@ -174,15 +209,15 @@ async function restoreApiKey() {
     if (storedKey) {
       const decryptedKey = await decryptApiKey(storedKey);
       if (decryptedKey && isValidApiKey(decryptedKey)) {
-        console.log('✅ API key restored');
+        console.log('API key restored');
         return decryptedKey;
       } else {
         localStorage.removeItem('mp_api_key_encrypted');
-        console.log('🗑️ Cleared corrupted stored key');
+        console.log('Cleared corrupted stored key');
       }
     }
   } catch (error) {
-    console.error('❌ Error restoring API key:', error);
+    console.error('Error restoring API key:', error);
   }
   return null;
 }

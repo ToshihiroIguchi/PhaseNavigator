@@ -22,8 +22,23 @@
          <strong>Generate Phase Diagram</strong>.</p>
     </div>
 
-    <div id="plot"></div>
+    <div id="plot" hidden></div>
     {% include "components/phase_table.html" %}
   </div>
 </div>
+
+<footer class="site-footer">
+  <p>
+    Phase Navigator v{{ app_version }}. Data from the
+    <a href="https://next-gen.materialsproject.org/" target="_blank" rel="noopener noreferrer">Materials Project</a>
+    (CC BY 4.0 unless noted). Please cite the Materials Project in publications:
+    A. Jain et al., APL Materials 1, 011002 (2013).
+  </p>
+  <p>
+    Some records (for example GNoME-derived data) may carry non-commercial terms.
+    Check the Materials Project terms before commercial use.
+    This software is released under the
+    <a href="https://github.com/ToshihiroIguchi/PhaseNavigator/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.
+  </p>
+</footer>
 {% endblock %}

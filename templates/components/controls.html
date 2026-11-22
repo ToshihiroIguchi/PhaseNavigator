@@ -12,59 +12,68 @@
   <!-- Chemical Formulas -->
   <div class="form-group">
     <label for="formulas">Chemical Formulas</label>
-    <input 
-      type="text" 
-      id="formulas" 
-      name="formulas" 
-      placeholder="Fe2O3, Al2O3, SiO2" 
+    <input
+      type="text"
+      id="formulas"
+      name="formulas"
+      placeholder="Fe2O3, Al2O3, SiO2"
       value="{{ formulas or '' }}"
       autocomplete="off"
+      aria-describedby="formulas-hint"
     />
-    <small class="hint">Enter 2–4 formulas separated by commas</small>
+    <small class="hint" id="formulas-hint">Enter 2–4 formulas separated by commas</small>
   </div>
 
   <!-- Materials Project API Key -->
   <div class="form-group">
     <label for="api-key">Materials Project API Key</label>
-    <input 
-      type="password" 
-      id="api-key" 
-      name="api-key" 
+    <input
+      type="password"
+      id="api-key"
+      name="api-key"
       placeholder="Your API key"
       autocomplete="off"
     />
+    <div class="key-actions">
+      <button type="button" class="link-button" id="api-key-toggle" aria-controls="api-key" aria-pressed="false">Show key</button>
+      <button type="button" class="link-button" id="api-key-clear">Remove saved key</button>
+      <span class="key-status" id="api-key-status" role="status"></span>
+    </div>
     <div class="api-info">
-      Get your free API key from 
-      <a href="https://materialsproject.org/api" target="_blank">Materials Project</a>
+      Get your free API key from
+      <a href="https://materialsproject.org/api" target="_blank" rel="noopener noreferrer">Materials Project</a>
     </div>
   </div>
 
   <!-- Temperature Controls -->
   <div class="toggle-container">
-    <label class="toggle-switch">
-      <input type="checkbox" id="temp-toggle">
+    <span class="toggle-switch">
+      <input type="checkbox" id="temp-toggle" role="switch">
       <span class="slider"></span>
-    </label>
-    <span class="toggle-label">Enable Temperature (Gibbs Free Energy)</span>
+    </span>
+    <label class="toggle-label" for="temp-toggle">Enable Temperature (Gibbs Free Energy)</label>
   </div>
 
   <div class="temperature-controls-compact" id="temp-controls">
     <div class="temp-control-row">
       <div class="temp-unit-toggle">
-        <span class="unit-label kelvin">K</span>
-        <label class="toggle-switch mini">
-          <input type="checkbox" id="temp-unit-toggle">
+        <span class="unit-label kelvin" aria-hidden="true">K</span>
+        <span class="toggle-switch mini">
+          <input type="checkbox" id="temp-unit-toggle" role="switch"
+                 aria-label="Use degrees Celsius instead of kelvin">
           <span class="slider"></span>
-        </label>
-        <span class="unit-label celsius">°C</span>
+        </span>
+        <span class="unit-label celsius" aria-hidden="true">°C</span>
       </div>
       <div class="temp-input-group">
-        <input type="number" id="temp-input" min="300" max="2000" step="10" value="300">
+        <input type="number" id="temp-input" min="300" max="2000" step="10" value="300"
+               aria-label="Temperature value">
         <span class="temp-unit">K</span>
       </div>
     </div>
     <div class="temp-slider-row">
-      <input type="range" id="temp-slider" min="300" max="2000" step="10" value="300">
+      <input type="range" id="temp-slider" min="300" max="2000" step="10" value="300"
+             aria-label="Temperature slider">
       <small id="temp-conversion">= 27 °C</small>
     </div>
   </div>
@@ -73,16 +82,16 @@
   <div class="form-row">
     <div class="form-group-half">
       <label for="e-cut">Energy Cutoff (eV/atom)</label>
-      <input 
-        type="number" 
-        id="e-cut" 
-        name="e_cut" 
-        step="0.1" 
-        min="0" 
-        max="2" 
+      <input
+        type="number"
+        id="e-cut"
+        name="e_cut"
+        step="0.1"
+        min="0"
+        max="2"
         value="{{ e_cut or 0.2 }}"
+        aria-describedby="e-cut-hint"
       />
-      <small class="hint">Also plots unstable phases up to this energy above the hull. The table lists stable phases only.</small>
     </div>
     <div class="form-group-half">
       <label for="functional">DFT Functional</label>
@@ -99,6 +108,7 @@
       </select>
     </div>
   </div>
+  <small class="hint" id="e-cut-hint">The energy cutoff also plots unstable phases up to this energy above the hull. The table lists stable phases only.</small>
 
   <!-- Hidden input for final temperature value -->
   <input type="hidden" id="temp" name="temp" value="{{ temp or 0 }}">
@@ -106,10 +116,10 @@
   <!-- Submit Button -->
   <button type="button" id="submit-btn">
     <span id="submit-text">Generate Phase Diagram</span>
-    <div id="submit-loading" class="submit-loading" hidden>
-      <div class="loading-spinner" aria-hidden="true"></div>
+    <span id="submit-loading" class="submit-loading" hidden>
+      <span class="loading-spinner" aria-hidden="true"></span>
       <span>Generating…</span>
-    </div>
+    </span>
   </button>
 
   <div class="info">
