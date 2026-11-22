@@ -19,14 +19,15 @@
   {% block content %}{% endblock %}
   
   <!-- JavaScript -->
-  {% if static_edition %}
-  <!-- Pyodide (Python in the browser) from a pinned release; the integrity hash guards the loader script -->
-  <script src="{{ pyodide_url }}pyodide.js" integrity="{{ pyodide_sri }}" crossorigin="anonymous" defer></script>
-  {% endif %}
   <script src="{{ static_prefix }}/js/utils.js?v=1.0.5"></script>
   <script src="{{ static_prefix }}/js/api.js?v=1.0.3"></script>
   {% if static_edition %}
-  <script src="{{ static_prefix }}/js/static_engine.js?v=1.0.0" data-pyodide-url="{{ pyodide_url }}"></script>
+  <!-- The calculation runs in a Web Worker that loads Pyodide (Python in the browser) from a pinned
+       release; the worker checks the integrity hash of the loader script before running it -->
+  <script src="{{ static_prefix }}/js/static_engine.js?v=2.0.1"
+          data-pyodide-url="{{ pyodide_url }}"
+          data-pyodide-sri="{{ pyodide_sri }}"
+          data-worker-url="{{ static_prefix }}/js/calc_worker.js?v=1.0.1"></script>
   {% endif %}
   <script src="{{ static_prefix }}/js/ui.js?v=1.0.9"></script>
   

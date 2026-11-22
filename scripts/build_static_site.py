@@ -6,14 +6,15 @@ The output folder can be served by any static web server (GitHub Pages, Netlify,
 * ``index.html``      the page, rendered from the same templates as the server edition;
 * ``static/``         CSS, JavaScript and images;
 * ``vendor/``         plotly.js (the bundle that ships with the Python plotly package);
-* ``phasecore.zip``   the calculation code that runs in the browser through Pyodide;
-* ``data/``           the pre-downloaded Materials Project data (built separately with
+* ``phasecore.zip``   the calculation code that runs in the browser (in a web worker) through Pyodide;
+* ``serve_static.py`` a standard-library-only web server for the folder (``python serve_static.py``);
+* ``data/``          the pre-downloaded Materials Project data (built separately with
                       ``scripts/build_static_data.py``; not touched by this script).
 
 Usage (from the repository root, with the project virtual environment's Python)::
 
     python -m scripts.build_static_site
-    python -m http.server --directory static_site 8080
+    python -m scripts.serve_static
 """
 from __future__ import annotations
 
@@ -33,10 +34,11 @@ from app.core.config import settings
 ROOT = Path(__file__).resolve().parent.parent
 
 # Pyodide release loaded from the jsDelivr CDN. The hash is the SHA-384 of
-# ``pyodide.js`` for exactly this version; update both together.
+# ``pyodide.mjs`` (the ES module build, the only one that runs in a worker) for exactly
+# this version; update both together.
 PYODIDE_VERSION = "314.0.8"
 PYODIDE_URL = f"https://cdn.jsdelivr.net/pyodide/v{PYODIDE_VERSION}/full/"
-PYODIDE_SRI = "sha384-0Tw0jFeRF+UzB1HbzjzDi5ZNMyMclQPHmYkEquv9V+lAj/rZBHxu1c35Uq28kDPo"
+PYODIDE_SRI = "sha384-VR+eYp8LZKGhhQ7Nql3TONJIMizM0VRxz87k6V7IyuQHElicjy7ULmkOuB2LFR3b"
 
 # Fixed timestamp so the same sources always give the same zip bytes.
 ZIP_TIMESTAMP = (2026, 1, 1, 0, 0, 0)
@@ -117,6 +119,8 @@ def build(out_dir: Path) -> List[str]:
     shutil.copyfile(Path(plotly.__file__).parent / "package_data" / "plotly.min.js", vendor_dir / "plotly.min.js")
 
     write_phasecore_zip(out_dir / "phasecore.zip")
+    # Standard-library-only server, so the folder can be served on a machine without the venv.
+    shutil.copyfile(ROOT / "scripts" / "serve_static.py", out_dir / "serve_static.py")
     (out_dir / ".nojekyll").write_text("", encoding="utf-8")
 
     warnings: List[str] = []

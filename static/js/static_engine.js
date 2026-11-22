@@ -1,33 +1,22 @@
 /**
- * Static edition engine.
+ * Static edition engine (page side).
  *
- * Runs the phase diagram calculation in the browser: Pyodide (Python compiled to
- * WebAssembly) executes the `phasecore` package on pre-downloaded Materials Project
- * data, so no server and no API key are involved. Only used when the page is built
- * by scripts/build_static_site.py (body[data-edition="static"]).
+ * The phase diagram calculation runs in a Web Worker (static/js/calc_worker.js):
+ * Pyodide executes the `phasecore` package on pre-downloaded Materials Project data,
+ * so no server and no API key are involved and the page stays responsive meanwhile.
+ * Only used when the page is built by scripts/build_static_site.py
+ * (body[data-edition="static"]).
  */
 const StaticEngine = (() => {
-  const PYODIDE_URL = document.currentScript.dataset.pyodideUrl;
-  const PYTHON_LIB_DIR = '/home/pyodide/lib';
+  const SCRIPT = document.currentScript;
+  const PYODIDE_URL = SCRIPT.dataset.pyodideUrl;
+  const PYODIDE_SRI = SCRIPT.dataset.pyodideSri;
+  const WORKER_URL = SCRIPT.dataset.workerUrl;
 
   let manifestPromise = null;
-  let runtimePromise = null;
-
-  /**
-   * Wait until a condition holds.
-   * @param {function(): boolean} condition - Polled every 100 ms.
-   * @param {number} timeoutMs - Give up after this long.
-   * @param {string} message - Error message on timeout.
-   * @returns {Promise<void>} Resolves when the condition is true.
-   * @throws {Error} With `message` if the timeout is reached.
-   */
-  async function waitFor(condition, timeoutMs, message) {
-    const start = Date.now();
-    while (!condition()) {
-      if (Date.now() - start > timeoutMs) throw new Error(message);
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
+  let worker = null;
+  let nextId = 1;
+  const pending = new Map();
 
   /**
    * Fetch a file that belongs to this site.
@@ -65,72 +54,56 @@ const StaticEngine = (() => {
   }
 
   /**
-   * Start Pyodide, install numpy and scipy and import the phasecore package.
-   * The work is done once; later calls reuse the same runtime.
-   * @param {function(string): void} onStatus - Receives progress messages.
-   * @returns {Promise<Object>} Proxy of the `phasecore.runtime` Python module.
+   * Fail every waiting request, for example when the worker cannot run at all.
+   * @param {string} message - User-facing error message.
    */
-  function startRuntime(onStatus) {
-    if (!runtimePromise) {
-      runtimePromise = (async () => {
-        onStatus('Loading the calculation engine (first run only)…');
-        await waitFor(
-          () => typeof loadPyodide === 'function',
-          30000,
-          'The calculation engine could not be loaded. Check your connection and reload the page.'
-        );
-        const pyodide = await loadPyodide({ indexURL: PYODIDE_URL });
-        onStatus('Loading numerical libraries…');
-        await pyodide.loadPackage(['numpy', 'scipy']);
-        onStatus('Loading the phase diagram code…');
-        const archive = await fetchSiteFile('phasecore.zip', 'phasecore.zip is missing from this site.');
-        pyodide.unpackArchive(await archive.arrayBuffer(), 'zip', { extractDir: PYTHON_LIB_DIR });
-        pyodide.runPython(
-          `import sys\nif '${PYTHON_LIB_DIR}' not in sys.path:\n    sys.path.insert(0, '${PYTHON_LIB_DIR}')`
-        );
-        return pyodide.pyimport('phasecore.runtime');
-      })().catch((error) => {
-        runtimePromise = null;
-        throw error;
-      });
-    }
-    return runtimePromise;
+  function failAll(message) {
+    for (const request of pending.values()) request.reject(new Error(message));
+    pending.clear();
   }
 
   /**
-   * Read the text of a data file, unpacking gzip when needed.
-   * Servers differ in whether they decompress `.gz` files themselves, so the
-   * gzip magic bytes decide.
-   * @param {Response} response - Response of the data file.
-   * @returns {Promise<string>} The JSON text.
+   * Create the worker on first use and start loading the engine in it.
+   * @returns {Worker} The shared calculation worker.
+   * @throws {Error} If this browser has no Web Worker support.
    */
-  async function readDataText(response) {
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes[0] === 0x1f && bytes[1] === 0x8b) {
-      if (typeof DecompressionStream === 'undefined') {
-        throw new Error('This browser cannot unpack the data files. Use a current version of Chrome, Edge, Firefox or Safari.');
+  function getWorker() {
+    if (worker) return worker;
+    if (typeof Worker === 'undefined') {
+      throw new Error('This browser cannot run the calculation. Use a current version of Chrome, Edge, Firefox or Safari.');
+    }
+    worker = new Worker(WORKER_URL, { type: 'module' });
+    worker.onmessage = (event) => {
+      const message = event.data;
+      const request = pending.get(message.id);
+      if (!request) return;
+      if (message.type === 'status') {
+        request.onStatus(message.text);
+      } else if (message.type === 'result') {
+        pending.delete(message.id);
+        request.resolve(message.payload);
+      } else if (message.type === 'error') {
+        pending.delete(message.id);
+        request.reject(new Error(message.message));
       }
-      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-      return new Response(stream).text();
-    }
-    return new TextDecoder().decode(bytes);
-  }
-
-  /**
-   * Make sure the dataset of a functional is loaded into the Python runtime.
-   * @param {Object} runtime - The `phasecore.runtime` proxy.
-   * @param {string} functional - UI functional name.
-   * @param {Object} manifest - Parsed manifest.
-   * @param {function(string): void} onStatus - Receives progress messages.
-   * @returns {Promise<void>} Resolves when the data is ready.
-   */
-  async function ensureDataset(runtime, functional, manifest, onStatus) {
-    if (runtime.has_dataset(functional)) return;
-    const info = manifest.datasets && manifest.datasets[functional];
-    if (!info) throw new Error('No data was built for the selected functional. Choose another one.');
-    onStatus('Loading Materials Project data…');
-    const response = await fetchSiteFile(`data/${info.file}`, `The data file ${info.file} is missing.`);
-    runtime.load_dataset(functional, await readDataText(response));
+    };
+    worker.onerror = (event) => {
+      // The worker script could not be loaded or crashed: start over on the next request.
+      console.error('Calculation worker failed:', event.message || event);
+      worker.terminate();
+      worker = null;
+      failAll(
+        'The calculation could not be started. The server may not be sending .js files as JavaScript ' +
+        '(see Troubleshooting in the README), or the page is out of date: reload it.'
+      );
+    };
+    worker.postMessage({
+      type: 'init',
+      pyodideUrl: PYODIDE_URL,
+      pyodideSri: PYODIDE_SRI,
+      siteBase: document.baseURI
+    });
+    return worker;
   }
 
   /**
@@ -138,11 +111,15 @@ const StaticEngine = (() => {
    * Errors are ignored here; they surface when a diagram is requested.
    */
   function preload() {
-    startRuntime(() => {}).catch(() => {});
+    try {
+      getWorker();
+    } catch (error) {
+      // Reported when a diagram is requested.
+    }
   }
 
   /**
-   * Calculate a phase diagram in the browser.
+   * Calculate a phase diagram in the worker.
    * @param {{f: string[], temp: number, e_cut: number, functional: string}} request - Form values.
    * @param {function(string): void} [onStatus] - Receives progress messages.
    * @returns {Promise<Object>} Response shaped like the server's: plot, phase_info, metadata.
@@ -150,27 +127,26 @@ const StaticEngine = (() => {
    */
   async function generate(request, onStatus = () => {}) {
     const manifest = await loadManifest();
-    const runtime = await startRuntime(onStatus);
-    await ensureDataset(runtime, request.functional, manifest, onStatus);
+    const info = manifest.datasets && manifest.datasets[request.functional];
+    if (!info) throw new Error('No data was built for the selected functional. Choose another one.');
 
-    onStatus('Calculating the phase diagram…');
-    // Let the browser paint the message first: the calculation blocks this thread.
-    await new Promise((resolve) => setTimeout(resolve, 30));
-
-    let payload;
-    try {
-      payload = JSON.parse(runtime.run(JSON.stringify({
-        formulas: request.f,
-        temperature: request.temp,
-        e_cut: request.e_cut,
-        functional: request.functional
-      })));
-    } catch (error) {
-      console.error('Calculation failed:', error);
-      throw new Error('The calculation failed unexpectedly. Try different formulas or reload the page.');
-    }
-    if (!payload.ok) throw new Error(payload.error);
-    return payload.result;
+    const engine = getWorker();
+    const id = nextId++;
+    return new Promise((resolve, reject) => {
+      pending.set(id, { resolve, reject, onStatus });
+      engine.postMessage({
+        type: 'run',
+        id,
+        functional: request.functional,
+        dataFile: info.file,
+        payload: {
+          formulas: request.f,
+          temperature: request.temp,
+          e_cut: request.e_cut,
+          functional: request.functional
+        }
+      });
+    });
   }
 
   return { generate, loadManifest, preload };
