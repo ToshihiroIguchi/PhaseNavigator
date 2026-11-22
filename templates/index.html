@@ -5,8 +5,23 @@
 {% block content %}
 <div id="main-container">
   {% include "components/controls.html" %}
-  
+
   <div id="output">
+    <!-- Errors are shown here so an earlier diagram stays visible -->
+    <div id="message" role="alert"></div>
+
+    <!-- Shown only while a request is in flight -->
+    <div id="status" class="status-panel" role="status" hidden>
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <span>Fetching data and building the diagram… <span id="status-elapsed">0 s</span></span>
+    </div>
+
+    <div id="empty-state" class="empty-state">
+      <h2>No diagram yet</h2>
+      <p>Enter 2–4 formulas and your Materials Project API key, then choose
+         <strong>Generate Phase Diagram</strong>.</p>
+    </div>
+
     <div id="plot"></div>
     {% include "components/phase_table.html" %}
   </div>

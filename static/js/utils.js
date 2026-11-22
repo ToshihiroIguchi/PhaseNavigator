@@ -2,6 +2,41 @@
  * Utility functions
  */
 
+// Inline SVG icons (stroke style) used instead of emoji. Each entry is a list of path data.
+const ICON_PATHS = {
+  alert: [
+    'M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z',
+    'M12 9v4',
+    'M12 17h.01'
+  ],
+  table: ['M3 5h18v14H3z', 'M3 10h18', 'M9 5v14'],
+  info: ['M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z', 'M12 16v-4', 'M12 8h.01']
+};
+
+/**
+ * Create a small inline SVG icon.
+ * @param {string} name - Key of ICON_PATHS.
+ * @returns {SVGElement} A decorative icon (hidden from assistive technology).
+ */
+function createIcon(name) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', `icon icon-${name}`);
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  (ICON_PATHS[name] || []).forEach((d) => {
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    svg.appendChild(path);
+  });
+  return svg;
+}
+
 // Temperature conversion utilities
 function kelvinToCelsius(k) {
   return k - 273.15;

@@ -612,6 +612,79 @@ input:checked + .slider:before {
   color: #6c757d;
 }
 
+/* Busy panel, empty state and submit-button spinner */
+.status-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--primary-50);
+  border: 1px solid var(--primary-200);
+  border-radius: var(--radius);
+  color: var(--primary-700);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-panel[hidden],
+.empty-state[hidden],
+.submit-loading[hidden],
+#submit-text[hidden] {
+  display: none;
+}
+
+.status-panel .loading-spinner {
+  flex: none;
+  margin-right: 0;
+}
+
+.empty-state {
+  margin-top: 1.5rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+  color: var(--gray-600);
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+}
+
+.empty-state h2 {
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+  color: var(--gray-800);
+}
+
+.submit-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.submit-loading .loading-spinner {
+  width: 16px;
+  height: 16px;
+  margin-right: 0;
+  border-color: rgb(255 255 255 / 0.4);
+  border-top-color: #ffffff;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* The previous diagram stays visible but dimmed while a new one is computed */
+#plot.is-stale {
+  opacity: 0.45;
+}
+
 /* Plot Area */
 #plot {
   width: 100%;

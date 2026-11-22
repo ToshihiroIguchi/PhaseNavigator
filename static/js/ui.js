@@ -4,6 +4,8 @@
 
 class UIManager {
   constructor() {
+    this.isSubmitting = false;
+    this.statusTimer = null;
     this.elements = this.initializeElements();
     this.initializeEventListeners();
     this.initializeTemperatureControls();
@@ -32,6 +34,10 @@ class UIManager {
       submitText: document.getElementById('submit-text'),
       submitLoading: document.getElementById('submit-loading'),
       plotDiv: document.getElementById('plot'),
+      messageBox: document.getElementById('message'),
+      statusBox: document.getElementById('status'),
+      statusElapsed: document.getElementById('status-elapsed'),
+      emptyState: document.getElementById('empty-state'),
       
       // Phase info elements
       phaseInfoContainer: document.getElementById('phase-info'),
@@ -245,73 +251,59 @@ class UIManager {
     console.log('Form input changed');
   }
 
+  /**
+   * Toggle the busy state of the submit button.
+   * @param {boolean} isLoading - True while a request is in flight.
+   */
   setLoadingState(isLoading) {
-    if (isLoading) {
-      this.elements.submitText.style.display = 'none';
-      this.elements.submitLoading.style.display = 'flex';
-      this.elements.submitBtn.disabled = true;
-    } else {
-      this.elements.submitText.style.display = 'inline';
-      this.elements.submitLoading.style.display = 'none';
-      this.elements.submitBtn.disabled = false;
-    }
+    this.isSubmitting = isLoading;
+    this.elements.submitText.hidden = isLoading;
+    this.elements.submitLoading.hidden = !isLoading;
+    this.elements.submitBtn.disabled = isLoading;
+    this.elements.submitBtn.setAttribute('aria-busy', String(isLoading));
   }
 
+  /**
+   * Show an error above the diagram. The previous diagram and phase table are
+   * left untouched so a failed request does not discard earlier results.
+   * The text is inserted with textContent, never parsed as HTML.
+   * @param {string} message - Message to show.
+   */
   showError(message) {
-    // Build the node with textContent so server/user supplied text is never parsed as HTML.
     const box = document.createElement('div');
     box.className = 'error-message';
-    const icon = document.createElement('span');
-    icon.className = 'error-icon';
-    icon.textContent = '⚠️';
+    box.append(createIcon('alert'));
     const text = document.createElement('span');
     text.textContent = message;
-    box.append(icon, text);
-    this.elements.plotDiv.replaceChildren(box);
-    this.hidePhaseInfo();
+    box.append(text);
+    this.elements.messageBox.replaceChildren(box);
   }
 
-  showLoading() {
-    this.elements.plotDiv.innerHTML = `
-      <div class="loading">
-        <div class="loading-spinner"></div>
-        Generating phase diagram...
-      </div>
-      <div class="progress-steps">
-        <div class="progress-step active" id="step-1">
-          <div class="progress-step-icon">1</div>
-          <span>Validating input formulas...</span>
-        </div>
-        <div class="progress-step pending" id="step-2">
-          <div class="progress-step-icon">2</div>
-          <span>Fetching data from Materials Project...</span>
-        </div>
-        <div class="progress-step pending" id="step-3">
-          <div class="progress-step-icon">3</div>
-          <span>Building phase diagram...</span>
-        </div>
-        <div class="progress-step pending" id="step-4">
-          <div class="progress-step-icon">4</div>
-          <span>Rendering interactive plot...</span>
-        </div>
-      </div>
-    `;
-    this.hidePhaseInfo();
+  /** Remove any message shown by showError. */
+  clearMessage() {
+    this.elements.messageBox.replaceChildren();
   }
 
-  updateProgress(stepNumber) {
-    for (let i = 1; i <= stepNumber; i++) {
-      const step = document.getElementById(`step-${i}`);
-      if (step) {
-        step.className = 'progress-step completed';
-        step.querySelector('.progress-step-icon').innerHTML = '✓';
-      }
-    }
-    
-    const nextStep = document.getElementById(`step-${stepNumber + 1}`);
-    if (nextStep) {
-      nextStep.className = 'progress-step active';
-    }
+  /**
+   * Show the busy panel with a running elapsed-time counter. Only real state is
+   * shown (a request is in flight); no fake progress steps.
+   */
+  showStatus() {
+    const start = Date.now();
+    this.elements.statusElapsed.textContent = '0 s';
+    this.elements.statusBox.hidden = false;
+    this.elements.plotDiv.classList.add('is-stale');
+    this.statusTimer = setInterval(() => {
+      this.elements.statusElapsed.textContent = `${Math.round((Date.now() - start) / 1000)} s`;
+    }, 1000);
+  }
+
+  /** Hide the busy panel and stop the elapsed-time counter. */
+  hideStatus() {
+    clearInterval(this.statusTimer);
+    this.statusTimer = null;
+    this.elements.statusBox.hidden = true;
+    this.elements.plotDiv.classList.remove('is-stale');
   }
 
   hidePhaseInfo() {
@@ -441,9 +433,14 @@ class UIManager {
     console.log('✅ Phase information table displayed');
   }
 
+  /**
+   * Validate the form, request the diagram from the API and render it.
+   * Errors are shown above the diagram; an earlier successful result stays visible.
+   */
   async handleSubmit() {
-    console.log('🚀 Form submission started');
-    
+    if (this.isSubmitting) return;
+    this.clearMessage();
+
     try {
       // Validate inputs
       const formulas = validateFormulas(this.elements.formulasInput.value);
@@ -451,83 +448,58 @@ class UIManager {
       const eCut = parseFloat(this.elements.eCutInput.value) || 0.2;
       const functional = this.elements.functionalSelect.value;
       const temperature = parseInt(this.elements.finalTempInput.value, 10) || 0;
-      
+
       if (!apiKey) {
         throw new Error('Materials Project API key is required');
       }
-      
+
       if (!isValidApiKey(apiKey)) {
         throw new Error('Invalid API key format. Please check your Materials Project API key.');
       }
-      
-      // Save API key
+
+      // Lock the button before any await so a double click cannot send two requests.
+      this.setLoadingState(true);
+      this.showStatus();
+
       await saveApiKey(apiKey);
-      
-      // Prepare request data
+
       const requestData = {
         f: formulas,
         temp: temperature,
         e_cut: eCut,
         functional: functional
       };
-      
-      console.log('Request data:', requestData);
-      
-      // Start loading state
-      this.setLoadingState(true);
-      this.showLoading();
-      
-      // Make API request with progress updates
-      this.updateProgress(1);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      this.updateProgress(2);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       const response = await generatePhaseDiagram(requestData, apiKey);
-      
-      this.updateProgress(3);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      console.log('Received response:', response);
-      
-      // Extract plot data and phase info
+
       const plotData = response.plot || response;
       const phaseInfo = response.phase_info || [];
       const metadata = response.metadata || {};
-      
-      // Clear existing plot
-      this.elements.plotDiv.innerHTML = '';
-      
-      // Create plot
-      // Enhanced Plotly loading check with timeout
+
       const plotlyAvailable = await this.ensurePlotlyAvailable(5000);
       if (!plotlyAvailable) {
-        console.error('Plotly library not loaded within timeout');
-        this.showError('Plot library loading timeout. Please refresh the page.');
-        return;
+        throw new Error('Plot library loading timeout. Please refresh the page.');
       }
 
+      this.elements.emptyState.hidden = true;
+      Plotly.purge(this.elements.plotDiv);
       Plotly.newPlot(this.elements.plotDiv, plotData.data, plotData.layout, {
         responsive: true,
         displayModeBar: true,
         modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'select2d', 'autoScale2d'],
         displaylogo: false
       });
-      
-      this.updateProgress(4);
-      
-      // Display phase information
-      if (phaseInfo && phaseInfo.length > 0) {
+
+      if (phaseInfo.length > 0) {
         this.displayPhaseInformation(phaseInfo, metadata);
+      } else {
+        this.hidePhaseInfo();
       }
-      
-      console.log('✅ Phase diagram generated successfully');
-      
     } catch (error) {
-      console.error('❌ Error generating phase diagram:', error);
+      console.error('Error generating phase diagram:', error);
       this.showError(error.message || 'An error occurred while generating the phase diagram');
     } finally {
+      this.hideStatus();
       this.setLoadingState(false);
     }
   }
