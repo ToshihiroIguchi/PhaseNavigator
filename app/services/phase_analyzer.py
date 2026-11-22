@@ -11,6 +11,50 @@ from .materials_client import MaterialsProjectClient
 logger = get_logger(__name__)
 
 
+def build_dummy_label_map(phase_diagram: CompoundPhaseDiagram) -> Dict[str, str]:
+    """
+    Map the dummy species symbols used internally by CompoundPhaseDiagram
+    (e.g. "Xf0+") to the terminal formulas the user entered (e.g. "Fe2O3").
+
+    Args:
+        phase_diagram: The compound phase diagram built from the terminals.
+
+    Returns:
+        Dictionary from dummy symbol to terminal reduced formula.
+    """
+    label_map: Dict[str, str] = {}
+    for terminal in phase_diagram.terminal_compositions:
+        for normalized, dummy in phase_diagram.species_mapping.items():
+            if terminal.fractional_composition.almost_equals(normalized):
+                label_map[str(dummy)] = terminal.reduced_formula
+                break
+    return label_map
+
+
+def replace_dummy_labels(data: Any, label_map: Dict[str, str]) -> Any:
+    """
+    Recursively replace dummy species symbols in every string of a JSON-like
+    structure (such as a Plotly figure dict).
+
+    Args:
+        data: Nested dicts, lists and strings.
+        label_map: Mapping from dummy symbol to the text to show instead.
+
+    Returns:
+        A new structure with the replacements applied; non-strings are kept.
+    """
+    if isinstance(data, str):
+        # Replace longer symbols first so one symbol cannot clobber another.
+        for symbol in sorted(label_map, key=len, reverse=True):
+            data = data.replace(symbol, label_map[symbol])
+        return data
+    if isinstance(data, list):
+        return [replace_dummy_labels(item, label_map) for item in data]
+    if isinstance(data, dict):
+        return {key: replace_dummy_labels(value, label_map) for key, value in data.items()}
+    return data
+
+
 class PhaseAnalyzer:
     """Service for analyzing phase diagrams and extracting phase information."""
     
@@ -168,7 +212,10 @@ class PhaseAnalyzer:
         # Generate plot
         plotter = PDPlotter(phase_diagram, backend="plotly", show_unstable=energy_cutoff)
         fig = plotter.get_plot()
-        plot_data = json.loads(fig.to_json())
+        plot_data = replace_dummy_labels(
+            json.loads(fig.to_json()),
+            build_dummy_label_map(phase_diagram)
+        )
         
         # Extract phase information
         phase_info = self.extract_phase_info(phase_diagram, entries, temperature)

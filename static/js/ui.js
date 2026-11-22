@@ -390,9 +390,9 @@ class UIManager {
     const temp = metadata.temperature || 0;
     const tempText = temp === 0 ? '0 K' : `${temp} K (${Math.round(kelvinToCelsius(temp))} °C)`;
     const hasCorrections = phaseInfo.some(phase => phase.correction !== 0);
-    const correctionNote = hasCorrections ? 
-      'Some phases include DFT energy corrections.' : 
-      'No energy corrections applied (all phases are reference states).';
+    const correctionNote = hasCorrections ?
+      'Some entries include empirical energy corrections (Materials Project compatibility scheme).' :
+      'No empirical energy corrections were applied to these entries.';
     
     const summaryLine = (label, text) => {
       const strong = document.createElement('strong');

@@ -1,3 +1,4 @@
+import re
 import pytest
 from unittest.mock import Mock, patch
 from app.services.materials_client import MaterialsProjectClient
@@ -71,3 +72,51 @@ def test_rate_limiter():
     
     # Check remaining requests
     assert limiter.get_remaining_requests(key) == 0
+
+def _build_offline_entries():
+    """Create a small Fe-Al-O set of computed entries without network access."""
+    from pymatgen.core import Composition
+    from pymatgen.entries.computed_entries import ComputedEntry
+
+    data = [
+        ("Fe", -8.3), ("Al", -3.7), ("O", -4.9),
+        ("Fe2O3", -38.0), ("Al2O3", -37.5), ("FeAl2O4", -50.0),
+    ]
+    return [
+        ComputedEntry(Composition(formula), energy, entry_id=f"mp-{i}")
+        for i, (formula, energy) in enumerate(data)
+    ]
+
+
+def test_generated_plot_uses_formulas_not_dummy_species():
+    """Axis labels show the entered formulas instead of dummy symbols like Xg0+."""
+    import json
+    from app.services.phase_analyzer import PhaseAnalyzer
+
+    client = Mock()
+    client.get_elements_from_formulas.return_value = ["Al", "Fe", "O"]
+    client.fetch_entries.return_value = _build_offline_entries()
+
+    result = PhaseAnalyzer(client).generate_phase_diagram(
+        formulas=["Fe2O3", "Al2O3"],
+        temperature=0,
+        energy_cutoff=0.2,
+        functional="GGA_GGA_U",
+        api_key="unused",
+    )
+
+    plot_json = json.dumps(result.plot)
+    assert "Al2O3" in plot_json
+    assert not re.search(r"\bX[a-z]\d?\+", plot_json)
+
+
+def test_replace_dummy_labels_is_recursive():
+    """Replacement reaches nested strings and keeps non-string values."""
+    from app.services.phase_analyzer import replace_dummy_labels
+
+    data = {"a": ["Fraction Xg0+", 1, None], "b": {"c": "Xf0+ and Xg0+"}}
+    result = replace_dummy_labels(data, {"Xf0+": "Fe2O3", "Xg0+": "Al2O3"})
+    assert result == {
+        "a": ["Fraction Al2O3", 1, None],
+        "b": {"c": "Fe2O3 and Al2O3"},
+    }
