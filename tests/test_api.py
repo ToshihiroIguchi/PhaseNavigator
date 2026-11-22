@@ -53,3 +53,36 @@ def test_diagram_endpoint_invalid_functional():
         "functional": "INVALID_FUNCTIONAL"
     }, headers={"X-API-KEY": "test_key_32_characters_long_123"})
     assert response.status_code == 400  # Validation error
+
+def test_validation_error_detail_is_human_readable():
+    """Validation errors are returned as plain sentences, not pydantic internals."""
+    response = client.post("/api/diagrams/", json={
+        "f": ["Fe2O3"],
+        "temp": 0,
+        "e_cut": 0.2,
+        "functional": "GGA_GGA_U"
+    }, headers={"X-API-KEY": "test_key_32_characters_long_123"})
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert "At least 2 chemical formulas" in detail
+    assert "'type'" not in detail
+    assert "'loc'" not in detail
+
+
+def test_validation_error_for_space_separated_formulas():
+    """A formula containing a space is reported with a clear message."""
+    response = client.post("/api/diagrams/", json={
+        "f": ["Fe2O3 Al2O3", "SiO2"],
+        "temp": 0,
+        "e_cut": 0.2,
+        "functional": "GGA_GGA_U"
+    }, headers={"X-API-KEY": "test_key_32_characters_long_123"})
+    assert response.status_code == 400
+    assert "contains a space" in response.json()["detail"]
+
+
+def test_validation_error_for_missing_api_key_header():
+    """A missing header is reported by name."""
+    response = client.post("/api/diagrams/", json={"f": ["Fe2O3", "Al2O3"]})
+    assert response.status_code == 400
+    assert "X-API-KEY" in response.json()["detail"] or "x_api_key" in response.json()["detail"]

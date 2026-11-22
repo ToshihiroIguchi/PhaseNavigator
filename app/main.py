@@ -8,6 +8,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from .core.config import settings
+from .core.errors import format_validation_errors
 from .core.logging import setup_logging, get_logger
 from .models.requests import FormDiagramRequest
 from .models.responses import ErrorResponse
@@ -81,7 +82,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=400,
         content=ErrorResponse(
-            detail=f"Validation error: {exc.errors()}",
+            detail=format_validation_errors(exc.errors()),
             error_code="VALIDATION_ERROR",
             timestamp=datetime.now(timezone.utc).isoformat()
         ).model_dump()
