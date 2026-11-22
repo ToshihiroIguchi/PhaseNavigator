@@ -115,29 +115,37 @@ class UIManager {
     this.updateUnitLabels(isKelvin);
   }
 
+  /**
+   * Convert the displayed temperature after the unit toggle was switched.
+   * The input still holds the value in the PREVIOUS unit, so it is converted
+   * to the new unit (isKelvin === true means we just switched to Kelvin).
+   * @param {boolean} isKelvin - True when the new unit is Kelvin.
+   */
   updateTemperatureInputs(isKelvin) {
-    const currentValue = parseInt(this.elements.tempInput.value, 10) || 300;
+    const currentValue = parseInt(this.elements.tempInput.value, 10) || (isKelvin ? 27 : 300);
     let newValue, newMin, newMax, step;
 
     if (isKelvin) {
-      newValue = this.elements.tempUnitToggle.checked ? celsiusToKelvin(currentValue) : currentValue;
+      newValue = celsiusToKelvin(currentValue);
       newMin = 300;
       newMax = 2000;
       step = 10;
     } else {
-      newValue = !this.elements.tempUnitToggle.checked ? kelvinToCelsius(currentValue) : currentValue;
+      newValue = kelvinToCelsius(currentValue);
       newMin = 27;
       newMax = 1727;
       step = 5;
     }
 
     newValue = Math.round(Math.min(newMax, Math.max(newMin, newValue)));
-    
-    this.elements.tempInput.value = newValue;
-    this.elements.tempSlider.value = newValue;
+
+    // Set the slider bounds before its value so the value is not clamped
+    // against the previous unit's range.
     this.elements.tempSlider.min = newMin;
     this.elements.tempSlider.max = newMax;
     this.elements.tempSlider.step = step;
+    this.elements.tempInput.value = newValue;
+    this.elements.tempSlider.value = newValue;
     
     if (this.elements.tempToggle.checked) {
       this.elements.finalTempInput.value = this.getKelvinValue();
@@ -173,10 +181,10 @@ class UIManager {
     let conversionText;
     if (isKelvin) {
       const celsius = Math.round(kelvinToCelsius(currentValue));
-      conversionText = `= ${celsius}°C`;
+      conversionText = `= ${celsius} °C`;
     } else {
       const kelvin = Math.round(celsiusToKelvin(currentValue));
-      conversionText = `= ${kelvin}K`;
+      conversionText = `= ${kelvin} K`;
     }
     
     this.elements.tempConversion.textContent = conversionText;
@@ -250,12 +258,16 @@ class UIManager {
   }
 
   showError(message) {
-    this.elements.plotDiv.innerHTML = `
-      <div class="error-message" style="display: flex; align-items: center; gap: 0.75rem;">
-        <span class="error-icon" style="font-size: 1.5rem;">⚠️</span>
-        <span>${message}</span>
-      </div>
-    `;
+    // Build the node with textContent so server/user supplied text is never parsed as HTML.
+    const box = document.createElement('div');
+    box.className = 'error-message';
+    const icon = document.createElement('span');
+    icon.className = 'error-icon';
+    icon.textContent = '⚠️';
+    const text = document.createElement('span');
+    text.textContent = message;
+    box.append(icon, text);
+    this.elements.plotDiv.replaceChildren(box);
     this.hidePhaseInfo();
   }
 
@@ -306,6 +318,65 @@ class UIManager {
     this.elements.phaseInfoContainer.style.display = 'none';
   }
 
+  /**
+   * Create a table cell whose content is always treated as plain text.
+   * @param {string} text - Cell text.
+   * @param {string} [className] - Optional CSS class list.
+   * @returns {HTMLTableCellElement} The new cell.
+   */
+  createCell(text, className) {
+    const td = document.createElement('td');
+    if (className) td.className = className;
+    td.textContent = text;
+    return td;
+  }
+
+  /**
+   * Create the energy-correction cell with an explanatory tooltip.
+   * @param {number} correction - Energy correction in eV.
+   * @returns {HTMLTableCellElement} The new cell.
+   */
+  createCorrectionCell(correction) {
+    const td = this.createCell(formatNumber(correction, 4), 'energy-cell');
+    td.title = correction !== 0
+      ? 'Energy correction for DFT systematic errors'
+      : 'No energy correction applied';
+    return td;
+  }
+
+  /**
+   * Create the Materials Project ID cell. Only IDs that match the expected
+   * pattern become links; anything else is shown as plain text.
+   * @param {string} entryId - Entry ID such as "mp-1234-GGA+U".
+   * @returns {HTMLTableCellElement} The new cell.
+   */
+  createEntryIdCell(entryId) {
+    const td = document.createElement('td');
+    td.className = 'entry-id-cell';
+    const cleanId = cleanMpId(entryId);
+
+    if (!/^(mp|mvc)-\d+$/.test(cleanId || '')) {
+      td.textContent = entryId || 'Unknown';
+      return td;
+    }
+
+    const suffix = getFunctionalSuffix(entryId);
+    const link = document.createElement('a');
+    link.href = `https://next-gen.materialsproject.org/materials/${cleanId}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = `View ${cleanId} on Materials Project (computed with ${suffix.replace('-', '') || 'standard functional'})`;
+    link.append(cleanId);
+    if (suffix) {
+      const small = document.createElement('span');
+      small.className = 'mp-id-suffix';
+      small.textContent = suffix;
+      link.append(small);
+    }
+    td.append(link);
+    return td;
+  }
+
   displayPhaseInformation(phaseInfo, metadata) {
     console.log('📊 Displaying phase information:', phaseInfo);
     
@@ -317,19 +388,26 @@ class UIManager {
     
     // Update summary
     const temp = metadata.temperature || 0;
-    const tempText = temp === 0 ? '0 K' : `${temp} K (${Math.round(kelvinToCelsius(temp))}°C)`;
+    const tempText = temp === 0 ? '0 K' : `${temp} K (${Math.round(kelvinToCelsius(temp))} °C)`;
     const hasCorrections = phaseInfo.some(phase => phase.correction !== 0);
     const correctionNote = hasCorrections ? 
       'Some phases include DFT energy corrections.' : 
       'No energy corrections applied (all phases are reference states).';
     
-    this.elements.phaseSummary.innerHTML = `
-      <strong>Calculation Details:</strong> 
-      Temperature = ${tempText}, 
-      Functional = ${metadata.functional || 'Unknown'}, 
-      Energy cutoff = ${metadata.e_cut || 0} eV/atom<br>
-      <strong>Energy Corrections:</strong> ${correctionNote}
-    `;
+    const summaryLine = (label, text) => {
+      const strong = document.createElement('strong');
+      strong.textContent = `${label} `;
+      return [strong, document.createTextNode(text)];
+    };
+    this.elements.phaseSummary.replaceChildren(
+      ...summaryLine(
+        'Calculation Details:',
+        `Temperature = ${tempText}, Functional = ${metadata.functional || 'Unknown'}, ` +
+        `Energy cutoff = ${metadata.e_cut || 0} eV/atom`
+      ),
+      document.createElement('br'),
+      ...summaryLine('Energy Corrections:', correctionNote)
+    );
     
     // Clear existing table rows
     this.elements.phaseTableBody.innerHTML = '';
@@ -348,33 +426,15 @@ class UIManager {
         }
       }
       
-      // Format MP ID with link
-      let mpIdHtml = phase.entry_id;
-      if (phase.entry_id && phase.entry_id !== 'Unknown' && 
-          (phase.entry_id.startsWith('mp-') || phase.entry_id.startsWith('mvc-'))) {
-        
-        const cleanId = cleanMpId(phase.entry_id);
-        const functionalSuffix = getFunctionalSuffix(phase.entry_id);
-        
-        mpIdHtml = `<a href="https://next-gen.materialsproject.org/materials/${cleanId}" target="_blank" rel="noopener noreferrer" title="View ${cleanId} on Materials Project (computed with ${functionalSuffix.replace('-', '') || 'standard functional'})">${cleanId}<span style="color: var(--gray-400); font-size: 0.8em;">${functionalSuffix}</span></a>`;
-      }
-      
-      // Correction tooltip
-      const correctionHtml = phase.correction !== 0 ? 
-        `<span title="Energy correction for DFT systematic errors">${formatNumber(phase.correction, 4)}</span>` : 
-        `<span title="No energy correction applied">${formatNumber(phase.correction, 4)}</span>`;
-      
-      row.innerHTML = `
-        <td class="formula-cell">${phase.formula}</td>
-        <td>${phase.composition}</td>
-        <td class="energy-cell ${formationEnergyClass}">
-          ${formatNumber(phase.formation_energy_per_atom, 4)}
-        </td>
-        <td class="energy-cell">${formatNumber(phase.energy_per_atom, 4)}</td>
-        <td class="energy-cell">${correctionHtml}</td>
-        <td class="entry-id-cell">${mpIdHtml}</td>
-      `;
-      
+      row.append(
+        this.createCell(phase.formula, 'formula-cell'),
+        this.createCell(phase.composition),
+        this.createCell(formatNumber(phase.formation_energy_per_atom, 4), `energy-cell ${formationEnergyClass}`),
+        this.createCell(formatNumber(phase.energy_per_atom, 4), 'energy-cell'),
+        this.createCorrectionCell(phase.correction),
+        this.createEntryIdCell(phase.entry_id)
+      );
+
       this.elements.phaseTableBody.appendChild(row);
     });
     

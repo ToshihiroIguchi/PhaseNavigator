@@ -45,3 +45,6 @@ start*.txt
 
 # Claude Code files
 .claude/
+
+# Playwright MCP artifacts
+.playwright-mcp/

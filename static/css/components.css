@@ -536,6 +536,21 @@ small.warn {
   animation: fadeIn 0.3s ease;
 }
 
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.error-icon {
+  font-size: 1.5rem;
+}
+
+.mp-id-suffix {
+  color: var(--gray-400);
+  font-size: 0.8em;
+}
+
 .success-message {
   background: rgba(16, 185, 129, 0.1);
   border: 2px solid rgba(16, 185, 129, 0.2);
