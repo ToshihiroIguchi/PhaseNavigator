@@ -11,12 +11,13 @@ This project uses the following third-party libraries and services:
 | uvicorn | BSD-3-Clause | ASGI server |
 | jinja2 | BSD-3-Clause | Template engine |
 | python-multipart | Apache-2.0 | Form data parsing |
+| plotly | MIT | Phase diagram figures; also ships the plotly.js bundle |
 
 ## JavaScript Dependencies
 
 | Library | License | Purpose |
 |---------|---------|---------|
-| Plotly.js | MIT | Interactive plotting |
+| Plotly.js | MIT | Interactive plotting (bundled with the plotly Python package and served locally from `/vendor/plotly.min.js`; no CDN) |
 
 ## External Services
 

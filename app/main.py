@@ -1,10 +1,14 @@
 from fastapi import FastAPI, Request, HTTPException, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
 from datetime import datetime, timezone
+from pathlib import Path
 import asyncio
+
+import plotly
+from plotly.offline import get_plotlyjs_version
 from contextlib import asynccontextmanager
 
 from .core.config import settings
@@ -62,6 +66,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Setup templates
 templates = Jinja2Templates(directory="templates")
 
+# Plotly.js bundled with the installed plotly package. Serving it locally keeps
+# the browser bundle in lockstep with the figures produced by the Python side.
+PLOTLY_JS_PATH = Path(plotly.__file__).parent / "package_data" / "plotly.min.js"
+templates.env.globals["plotly_js_version"] = get_plotlyjs_version()
+templates.env.globals["app_version"] = settings.app_version
+
 # Include API routers
 app.include_router(diagrams_router, prefix="/api")
 app.include_router(health_router, prefix="/api")
@@ -115,6 +125,22 @@ async def general_exception_handler(request: Request, exc: Exception):
             error_code="INTERNAL_ERROR",
             timestamp=datetime.now(timezone.utc).isoformat()
         ).model_dump()
+    )
+
+
+@app.get("/vendor/plotly.min.js", include_in_schema=False)
+async def plotly_js():
+    """
+    Serve the plotly.js bundle shipped with the Python plotly package.
+
+    Returns:
+        The JavaScript file with a long cache lifetime (the page URL carries
+        the version, so a new version is fetched automatically).
+    """
+    return FileResponse(
+        PLOTLY_JS_PATH,
+        media_type="application/javascript",
+        headers={"Cache-Control": "public, max-age=86400"}
     )
 
 

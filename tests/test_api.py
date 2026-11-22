@@ -86,3 +86,15 @@ def test_validation_error_for_missing_api_key_header():
     response = client.post("/api/diagrams/", json={"f": ["Fe2O3", "Al2O3"]})
     assert response.status_code == 400
     assert "X-API-KEY" in response.json()["detail"] or "x_api_key" in response.json()["detail"]
+
+
+def test_plotly_js_is_served_locally():
+    """The plotly.js bundle is served by the app, not by a third-party CDN."""
+    response = client.get("/vendor/plotly.min.js")
+    assert response.status_code == 200
+    assert "javascript" in response.headers["content-type"]
+    assert len(response.content) > 100_000
+
+    page = client.get("/")
+    assert b"/vendor/plotly.min.js" in page.content
+    assert b"cdn.plot.ly" not in page.content

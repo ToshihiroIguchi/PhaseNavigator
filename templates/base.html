@@ -6,8 +6,8 @@
   <title>{% block title %}Phase Navigator{% endblock %}</title>
   <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
   
-  <!-- External dependencies -->
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <!-- plotly.js bundled with the Python plotly package (served locally) -->
+  <script src="/vendor/plotly.min.js?v={{ plotly_js_version }}"></script>
   
   <!-- CSS -->
   <link rel="stylesheet" href="/static/css/main.css">
