@@ -114,6 +114,28 @@ def test_license_lookup_for_everything_is_split_by_element_count():
         build.redistributable_ids(client, None)
 
 
+def test_earlier_downloads_are_kept_only_for_the_same_snapshot(tmp_path):
+    """Adding a thermo type keeps the finished ones; another scope or database version does not."""
+    (tmp_path / "entries_gga_ggau.json.gz").write_bytes(b"x")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({
+        "scope": "all",
+        "database_version": "v1",
+        "datasets": {
+            "GGA_GGA_U": {"file": "entries_gga_ggau.json.gz"},
+            "R2SCAN": {"file": "entries_r2scan.json.gz"},  # file is missing
+            "OTHER": {"file": "entries_gga_ggau.json.gz"},  # unknown functional
+        },
+    }), encoding="utf-8")
+
+    assert list(build.previous_datasets(manifest, "all", "v1")) == ["GGA_GGA_U"]
+    assert build.previous_datasets(manifest, "all", "v2") == {}
+    assert build.previous_datasets(manifest, ["Fe"], "v1") == {}
+    assert build.previous_datasets(tmp_path / "missing.json", "all", "v1") == {}
+    manifest.write_text("not json", encoding="utf-8")
+    assert build.previous_datasets(manifest, "all", "v1") == {}
+
+
 def test_written_dataset_is_reproducible_and_loadable(tmp_path):
     """The same payload gives the same bytes, and the file loads back into a Dataset."""
     entries = make_entries()

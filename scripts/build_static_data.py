@@ -203,6 +203,34 @@ def batched(items: Sequence[str], size: int) -> Iterable[Sequence[str]]:
         yield items[start:start + size]
 
 
+def previous_datasets(manifest_path: Path, scope: Any, database_version: Optional[str]) -> Dict[str, Any]:
+    """
+    Read the datasets of an earlier run so a later run can add thermo types to them.
+
+    Args:
+        manifest_path: Location of an existing ``manifest.json`` (may not exist).
+        scope: Scope of the current run (``"all"`` or a list of elements).
+        database_version: Database version of the current run.
+
+    Returns:
+        The earlier ``datasets`` entries whose files exist, or an empty dict when the
+        manifest is missing or unreadable, or covers another scope or database version
+        (snapshots of different versions must not be mixed).
+    """
+    try:
+        previous = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if previous.get("scope") != scope or previous.get("database_version") != database_version:
+        return {}
+    datasets = previous.get("datasets") or {}
+    return {
+        key: info
+        for key, info in datasets.items()
+        if key in DATASETS and (manifest_path.parent / str(info.get("file", ""))).is_file()
+    }
+
+
 def build_dataset(
     client: Any,
     functional: str,
@@ -366,11 +394,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "tools": tool_versions(),
         "datasets": {},
     }
+    manifest_path = out_dir / "manifest.json"
     with MPRester(api_key=read_key(args.key_file)) as client:
         try:
             manifest["database_version"] = client.get_database_version()
         except Exception:  # noqa: BLE001 - the version is informational only
             manifest["database_version"] = None
+        manifest["datasets"] = previous_datasets(manifest_path, scope, manifest["database_version"])
+        if manifest["datasets"]:
+            print(f"keeping already downloaded: {', '.join(manifest['datasets'])}")
         allowed = redistributable_ids(client, chemsys)
         print(f"{len(allowed)} materials carry a redistributable license")
         for functional in functionals:
@@ -385,9 +417,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 **info,
             }
             print(f"wrote {DATASETS[functional]['file']}: {payload['count']} entries, {info['bytes']} bytes")
+            # Written after every thermo type so an interrupted run keeps what is finished.
+            manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {out_dir / 'manifest.json'}")
+    print(f"wrote {manifest_path}")
     return 0
 
 
