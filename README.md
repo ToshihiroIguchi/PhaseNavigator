@@ -215,12 +215,56 @@ The script writes one gzip file per thermo type plus `manifest.json` (retrieval 
 
 ### Step 3: Build and serve the site
 
-```bash
-python -m scripts.build_static_site                      # writes static_site/ (the data folder is left alone)
-python -m http.server --directory static_site 8080       # then open http://127.0.0.1:8080/
+```powershell
+# Windows (PowerShell)
+.\venv\Scripts\python.exe -m scripts.build_static_site     # writes static_site/ (the data folder is left alone)
+.\venv\Scripts\python.exe -m scripts.serve_static          # then open http://127.0.0.1:8080/
 ```
 
-Use the same virtual environment Python as above. The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
+```bash
+# Linux / macOS
+venv/bin/python -m scripts.build_static_site
+venv/bin/python -m scripts.serve_static
+```
+
+`scripts/serve_static.py` is a small web server that needs **nothing but Python** (standard library only). Use it instead of `python -m http.server`: it sends the right MIME types on every system (a web worker is refused when `.js` files are served as `text/plain`, which some Windows setups do), it makes browsers re-check the page after every rebuild, and it serves several browsers at once.
+
+| Option | Meaning |
+|--------|---------|
+| `--port 9000` | Use another port (default 8080) |
+| `--lan` | Also accept connections from other computers on the local network (default: this computer only) |
+| `--dir <folder>` | Serve another folder (default `static_site`) |
+
+Press `Ctrl+C` to stop. The server prints the addresses to open; with `--lan` it also prints this computer's network address (for example `http://192.168.0.5:8080/`). After downloading new data you do not need to rebuild: the browser reads `static_site/data/` directly (reload the page).
+
+**Serving from a computer without the project environment.** `build_static_site` copies `serve_static.py` into `static_site/`. Copy the whole `static_site/` folder to any computer that has Python 3.8 or newer and run:
+
+```bash
+python serve_static.py --lan        # run inside the copied folder; `py serve_static.py --lan` on Windows
+```
+
+**What visitors need.** A current browser (Chrome, Edge, Firefox or Safari). The first calculation downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN, so the visitor's computer needs internet access once; later visits use the browser cache. The calculation runs in a background thread (a web worker), so the page stays usable while it works. Plain `http://` addresses on a local network work: no HTTPS is required.
+
+**Sharing inside a LAN.** Start the server with `--lan` and give the printed address to your group. Windows asks for permission the first time; allow it for **private networks** only. To open the port from PowerShell (run as administrator) and to remove the rule later:
+
+```powershell
+New-NetFirewallRule -DisplayName "Phase Navigator" -Direction Inbound -Protocol TCP -LocalPort 8080 -Profile Private -RemoteAddress LocalSubnet -Action Allow
+Remove-NetFirewallRule -DisplayName "Phase Navigator"
+```
+
+To find this computer's address yourself, use `ipconfig` (Windows) or `ip addr` (Linux).
+
+**Troubleshooting.**
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| "The data files are missing" | `static_site/data/manifest.json` does not exist. Run Step 2 |
+| "If you opened the page as a local file ..." | The page was opened by double-clicking `index.html`. Start the server and use the `http://` address |
+| "The calculation could not be started" | The browser could not load the worker script. Use `serve_static` (not another server that sends `.js` as `text/plain`) and reload with `Ctrl+F5` |
+| "The calculation engine could not be loaded" | The computer cannot reach `cdn.jsdelivr.net`. Check the connection or proxy |
+| "cannot listen on ..." when starting | The port is in use. Choose another with `--port` |
+| Other computers cannot connect | Start with `--lan`, allow the port in the firewall (above), and use the printed address, not `127.0.0.1` |
+| An old version of the page appears | Reload with `Ctrl+F5` |
 
 ### Notes
 
@@ -228,19 +272,18 @@ Use the same virtual environment Python as above. The first calculation in a bro
 - `tests/test_phasecore.py` compares `phasecore` with the pymatgen server code path (stable phases, energies, finite temperature including gases, up to four terminals).
 - Known differences from the server edition: the figures are drawn by `phasecore` rather than pymatgen's `PDPlotter` (same style, not identical); when several polymorphs have the same energy (for example experimental gas data), the static edition picks the lowest entry ID deterministically.
 
-### Sharing inside a LAN
+### Sharing inside a LAN (which edition?)
 
 Two ways to let a limited group use the app without publishing the data. Neither sends the Materials Project data to the public internet.
 
 | Option | What users receive | API key |
 |--------|--------------------|---------|
 | Server edition (`.\run.ps1` / `./run.sh`, listens on `0.0.0.0:8000`) | Only the calculated diagram; data is fetched with the user's own key and never stored | Each user needs their own free key (keys must not be shared) |
-| Static edition (`python -m http.server --directory static_site 8080 --bind 0.0.0.0`) | The data files are downloaded by every browser that opens the page | Not needed |
+| Static edition (`scripts.serve_static --lan`, see Step 3) | The data files are downloaded by every browser that opens the page | Not needed |
 
-- Allow the port in the firewall for the LAN only (Windows: an inbound rule limited to the private profile).
 - Over plain HTTP inside a LAN the API key of the server edition travels unencrypted. Use a trusted network or put an HTTPS reverse proxy in front.
 - The static edition hands the data itself to the users. CC BY 4.0 allows this with attribution, but keep it to the group you intend and never include non-commercial (GNoME) data.
-- The server edition runs every calculation on the server; a quaternary system can take about a minute, so many simultaneous users will be slow.
+- The server edition runs every calculation on the server; a quaternary system can take about a minute, so many simultaneous users will be slow. In the static edition every user's own computer calculates.
 
 ## 🛠️ Technical Details
 
