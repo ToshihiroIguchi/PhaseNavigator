@@ -1,9 +1,18 @@
 # Start the application using the project virtual environment.
-# Usage: .\run.ps1 [extra uvicorn arguments]
-param([Parameter(ValueFromRemainingArguments = $true)][string[]]$UvicornArgs)
+# Usage: .\run.ps1 [-AllowNonCommercial] [extra uvicorn arguments]
+#   -AllowNonCommercial  Make non-commercial (CC BY-NC, e.g. GNoME) data available
+#                        as an opt-in option in the UI. Disabled by default.
+param(
+    [switch]$AllowNonCommercial,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$UvicornArgs
+)
 
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot
+
+if ($AllowNonCommercial) {
+    $env:ALLOW_NON_COMMERCIAL = "1"
+}
 
 $VenvPython = "venv\Scripts\python.exe"
 if (-not (Test-Path $VenvPython)) {

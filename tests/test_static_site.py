@@ -3,6 +3,7 @@ import json
 import subprocess
 import sys
 import zipfile
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -145,7 +146,8 @@ def test_data_scope_limits_the_elements():
 
 def test_server_page_is_unchanged_by_the_static_templates():
     """The server edition still shows the API key field and loads assets from /static."""
-    html = TestClient(app).get("/").text
+    with patch("app.main.settings.allow_non_commercial", True):
+        html = TestClient(app).get("/").text
 
     assert 'id="api-key"' in html
     assert 'id="include-non-commercial"' in html

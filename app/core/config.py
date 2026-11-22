@@ -1,6 +1,6 @@
 import os
 from typing import List
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 try:
     from pydantic import BaseSettings
@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     min_formulas: int = 2
     max_formulas: int = 4
     
+    # Non-commercial data (CC BY-NC, e.g. GNoME). Disabled unless the server is
+    # started with ALLOW_NON_COMMERCIAL=1 (see run.ps1 -AllowNonCommercial).
+    # When disabled the option is hidden in the UI and rejected by the API.
+    allow_non_commercial: bool = Field(default=False, validation_alias="ALLOW_NON_COMMERCIAL")
+
     # Logging
     log_level: str = "INFO"
     log_file: str = "phasenav.log"
