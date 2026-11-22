@@ -55,8 +55,7 @@
   <!-- Temperature Controls -->
   <div class="toggle-container">
     <span class="toggle-switch">
-      <input type="checkbox" id="temp-toggle" role="switch">
-      <span class="slider"></span>
+      <input type="checkbox" id="temp-toggle">
     </span>
     <label class="toggle-label" for="temp-toggle">Enable Temperature (Gibbs Free Energy)</label>
   </div>
@@ -65,10 +64,9 @@
     <div class="temp-control-row">
       <div class="temp-unit-toggle">
         <span class="unit-label kelvin" aria-hidden="true">K</span>
-        <span class="toggle-switch mini">
-          <input type="checkbox" id="temp-unit-toggle" role="switch"
+        <span class="toggle-switch">
+          <input type="checkbox" id="temp-unit-toggle"
                  aria-label="Use degrees Celsius instead of kelvin">
-          <span class="slider"></span>
         </span>
         <span class="unit-label celsius" aria-hidden="true">°C</span>
       </div>
@@ -123,9 +121,8 @@
   <!-- Non-commercial data (GNoME) is excluded unless this is switched on -->
   <div class="toggle-container">
     <span class="toggle-switch">
-      <input type="checkbox" id="include-non-commercial" role="switch"
+      <input type="checkbox" id="include-non-commercial"
              aria-describedby="non-commercial-hint">
-      <span class="slider"></span>
     </span>
     <label class="toggle-label" for="include-non-commercial">Include non-commercial data (GNoME, CC BY-NC 4.0)</label>
   </div>
