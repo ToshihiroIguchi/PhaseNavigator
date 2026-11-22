@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import getpass
 import gzip
 import hashlib
 import itertools
@@ -331,6 +332,10 @@ def read_key(key_file: Optional[str]) -> str:
     """
     Read the API key without ever echoing it.
 
+    The key is taken from ``--key-file``, then the ``MP_API_KEY`` environment variable, then a
+    hidden prompt (only when a terminal is attached). There is deliberately no option that takes
+    the key itself: command-line arguments end up in the shell history and the process list.
+
     Args:
         key_file: Optional path of a text file holding the key.
 
@@ -338,13 +343,24 @@ def read_key(key_file: Optional[str]) -> str:
         The key.
 
     Raises:
-        SystemExit: If no key is available.
+        SystemExit: If no key is available or the key file cannot be read.
     """
     if key_file:
-        return Path(key_file).read_text(encoding="utf-8").strip()
+        try:
+            key = Path(key_file).read_text(encoding="utf-8").strip()
+        except OSError as error:
+            raise SystemExit(f"Cannot read the key file {key_file}: {error.strerror}")
+        if not key:
+            raise SystemExit(f"The key file {key_file} is empty.")
+        return key
     key = os.environ.get("MP_API_KEY", "").strip()
+    if not key and sys.stdin.isatty():
+        key = getpass.getpass("Materials Project API key (input is hidden): ").strip()
     if not key:
-        raise SystemExit("Set MP_API_KEY or pass --key-file (keep the file outside the repository).")
+        raise SystemExit(
+            "No API key. Run in a terminal to be asked for it, set MP_API_KEY, or pass --key-file "
+            "(keep the file outside the repository)."
+        )
     return key
 
 
@@ -363,7 +379,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     group.add_argument("--elements", help="Comma-separated elements; includes all their subsystems (max 9).")
     group.add_argument("--all", action="store_true", help="Download every material (very slow).")
     parser.add_argument("--out", default="static_site/data", help="Output directory.")
-    parser.add_argument("--key-file", help="Text file holding the API key (outside the repository).")
+    parser.add_argument("--key-file", help="Text file holding the API key (outside the repository). Without it, MP_API_KEY is used, then a hidden prompt.")
     parser.add_argument(
         "--functionals", default=",".join(DATASETS), help="Comma-separated subset of: " + ", ".join(DATASETS)
     )

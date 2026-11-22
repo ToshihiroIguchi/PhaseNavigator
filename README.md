@@ -145,21 +145,85 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 
 ## 🌐 Static Edition (no server, no API key)
 
-The same page can run without a server. The data is downloaded once with a script and the calculation runs in the browser through [Pyodide](https://pyodide.org/) (`phasecore/` uses only NumPy and SciPy). Visitors do not need an API key.
+The same page can run without a server. The data is downloaded once with a script and the calculation runs in the browser through [Pyodide](https://pyodide.org/) (`phasecore/` uses only NumPy and SciPy). Visitors do not need an API key; only the person who downloads the data does.
 
-```bash
-# 1. Download the data (CC BY 4.0 materials only). Keep the key file outside the repository.
-python -m scripts.build_static_data --key-file /path/to/key.txt --elements Al,C,Fe,H,O
-# 2. Build the site and serve it
-python -m scripts.build_static_site
-python -m http.server --directory static_site 8080
+All commands below run from the repository root with the project virtual environment's Python (`.\venv\Scripts\python.exe` on Windows, `venv/bin/python` on Linux/macOS; see section 1 of `CLAUDE.md`).
+
+### Step 1: Get a Materials Project API key
+
+Sign up (free) at [next-gen.materialsproject.org/api](https://next-gen.materialsproject.org/api) and copy your key. The key is personal: the Materials Project terms forbid sharing it among several users or in public places. Never put it in the repository, in a commit, in an issue or in a screenshot.
+
+### Step 2: Download the data
+
+`scripts/build_static_data.py` needs the key. It looks for it in this order, and never prints or logs it:
+
+| Order | How | When to use it |
+|-------|-----|----------------|
+| 1 | `--key-file <path>`: a text file that contains only the key | Unattended or repeated runs. Keep the file **outside** the repository and delete it when you are done |
+| 2 | Environment variable `MP_API_KEY` | Scripts and CI. It lives only in the current terminal session |
+| 3 | A hidden prompt (nothing is shown while you type or paste) | The simplest way when you run the script by hand in a terminal |
+
+There is deliberately **no** option that takes the key itself (such as `--api-key KEY`): command-line arguments are stored in the shell history and are visible to other users in the process list.
+
+**Windows (PowerShell):**
+
+```powershell
+# (a) Hidden prompt: just run it and paste the key when asked
+.\venv\Scripts\python.exe -m scripts.build_static_data --elements Al,C,Fe,H,O
+
+# (b) Key file outside the repository
+.\venv\Scripts\python.exe -m scripts.build_static_data --key-file C:\Users\you\mp_key.txt --elements Al,C,Fe,H,O
+
+# (c) Environment variable for this session only
+$env:MP_API_KEY = Read-Host "MP API key"   # typed input is visible; prefer (a)
+.\venv\Scripts\python.exe -m scripts.build_static_data --elements Al,C,Fe,H,O
+Remove-Item Env:MP_API_KEY
 ```
 
-Use the project virtual environment's Python (`venv\Scripts\python.exe` / `venv/bin/python`).
+**Linux / macOS:**
 
-- `--elements` (at most 9) downloads those elements and all their subsystems; a diagram can only use those elements. `--all` downloads everything. Measured on the 2026-09-28 database: the `GGA_GGA_U` set has about 152,000 entries (4.2 MB gzipped) and took about 55 minutes to download, most of it for the license lookup and the entry fetch. The browser loads it in a few seconds and a four-element system (Li-Fe-P-O) calculates in about 4 seconds on the first run (tens of milliseconds afterwards). A run can be limited to some thermo types with `--functionals GGA_GGA_U_R2SCAN,R2SCAN`; the finished ones are kept in `manifest.json` as long as the scope and the database version are the same (otherwise they are dropped, so snapshots are never mixed). The manifest is written after each thermo type, but an interrupted thermo type starts over, so downloading them in separate runs is safer.
-- Materials whose license is not CC BY (for example GNoME) or cannot be determined are left out.
-- The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
+```bash
+# (a) Hidden prompt
+venv/bin/python -m scripts.build_static_data --elements Al,C,Fe,H,O
+
+# (b) Key file outside the repository
+venv/bin/python -m scripts.build_static_data --key-file ~/mp_key.txt --elements Al,C,Fe,H,O
+
+# (c) Environment variable for this session only (read -s hides the input)
+read -rs MP_API_KEY && export MP_API_KEY
+venv/bin/python -m scripts.build_static_data --elements Al,C,Fe,H,O
+unset MP_API_KEY
+```
+
+Options:
+
+| Option | Meaning |
+|--------|---------|
+| `--elements Al,Fe,O` | Download these elements and all their subsystems (at most 9). A diagram can then only use these elements |
+| `--all` | Download every material (see the measurements below) |
+| `--functionals ...` | Limit to some of `GGA_GGA_U`, `GGA_GGA_U_R2SCAN`, `R2SCAN` (default: all three) |
+| `--out <dir>` | Output folder (default `static_site/data`) |
+| `--limit N` | Stop after N materials per thermo type (smoke tests) |
+
+The script writes one gzip file per thermo type plus `manifest.json` (retrieval date, database version, counts, SHA-256) into the output folder. Only materials with a CC BY 4.0 license are kept: GNoME and other non-commercial materials, and materials whose license cannot be determined, are left out.
+
+**Full download.** Measured on the 2026-09-28 database: `GGA_GGA_U` has about 152,000 entries (4.2 MB gzipped) and took about 55 minutes; `GGA_GGA_U_R2SCAN` has about 153,000 (4.5 MB); `R2SCAN` has about 37,000 (1.0 MB) because most of its materials are GNoME. The browser loads the data in a few seconds and a four-element system (Li-Fe-P-O) calculates in about 4 seconds on the first run (tens of milliseconds afterwards).
+
+- The manifest is written after each thermo type. Finished thermo types are kept when you run the script again with the same scope and database version (otherwise they are dropped, so snapshots are never mixed).
+- An interrupted thermo type starts over, so downloading them in separate runs (`--functionals GGA_GGA_U`, then `--functionals GGA_GGA_U_R2SCAN,R2SCAN`) is safer.
+- To refresh the data later, run the script again; a new database version replaces the old files.
+
+### Step 3: Build and serve the site
+
+```bash
+python -m scripts.build_static_site                      # writes static_site/ (the data folder is left alone)
+python -m http.server --directory static_site 8080       # then open http://127.0.0.1:8080/
+```
+
+Use the same virtual environment Python as above. The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
+
+### Notes
+
 - The data files and `static_site/` are git-ignored. The Materials Project data is CC BY 4.0: the page footer gives the credit, the license link and the statement of changes. The terms ask you to **contact the Materials Project about acknowledgements before publicly re-distributing** the data, so do that before putting such a site on the public internet (see `DEPENDENCIES.md`).
 - `tests/test_phasecore.py` compares `phasecore` with the pymatgen server code path (stable phases, energies, finite temperature including gases, up to four terminals).
 - Known differences from the server edition: the figures are drawn by `phasecore` rather than pymatgen's `PDPlotter` (same style, not identical); when several polymorphs have the same energy (for example experimental gas data), the static edition picks the lowest entry ID deterministically.
@@ -170,7 +234,7 @@ Two ways to let a limited group use the app without publishing the data. Neither
 
 | Option | What users receive | API key |
 |--------|--------------------|---------|
-| Server edition (`.un.ps1` / `./run.sh`, listens on `0.0.0.0:8000`) | Only the calculated diagram; data is fetched with the user's own key and never stored | Each user needs their own free key (keys must not be shared) |
+| Server edition (`.\run.ps1` / `./run.sh`, listens on `0.0.0.0:8000`) | Only the calculated diagram; data is fetched with the user's own key and never stored | Each user needs their own free key (keys must not be shared) |
 | Static edition (`python -m http.server --directory static_site 8080 --bind 0.0.0.0`) | The data files are downloaded by every browser that opens the page | Not needed |
 
 - Allow the port in the firewall for the LAN only (Windows: an inbound rule limited to the private profile).

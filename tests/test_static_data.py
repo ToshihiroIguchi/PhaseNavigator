@@ -170,5 +170,21 @@ def test_key_is_read_from_file_or_environment(tmp_path, monkeypatch):
     assert build.read_key(None) == "fromenv"
 
     monkeypatch.delenv("MP_API_KEY")
-    with pytest.raises(SystemExit):
+    monkeypatch.setattr(build.sys.stdin, "isatty", lambda: False)
+    with pytest.raises(SystemExit, match="No API key"):
         build.read_key(None)
+
+
+def test_key_is_asked_for_in_a_terminal_and_bad_key_files_are_reported(tmp_path, monkeypatch):
+    """With a terminal attached the key is typed hidden; unreadable or empty key files stop the script."""
+    monkeypatch.delenv("MP_API_KEY", raising=False)
+    monkeypatch.setattr(build.sys.stdin, "isatty", lambda: True)
+    monkeypatch.setattr(build.getpass, "getpass", lambda prompt: "  typed-key \n")
+    assert build.read_key(None) == "typed-key"
+
+    with pytest.raises(SystemExit, match="Cannot read the key file"):
+        build.read_key(str(tmp_path / "missing.txt"))
+    empty = tmp_path / "empty.txt"
+    empty.write_text("\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match="is empty"):
+        build.read_key(str(empty))
