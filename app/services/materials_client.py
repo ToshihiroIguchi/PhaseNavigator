@@ -3,7 +3,7 @@ import re
 from typing import List, Set, Tuple
 
 from mp_api.client import MPRester
-from pymatgen.entries.computed_entries import ComputedEntry
+from pymatgen.entries.computed_entries import ComputedEntry, G_ELEMS, GibbsComputedStructureEntry
 
 from ..core.logging import get_logger
 from ..core.config import settings
@@ -29,6 +29,20 @@ def base_material_id(entry_id: object) -> str:
         The bare material ID (e.g. "mp-1143"); unchanged if there is no suffix.
     """
     return _ENTRY_SUFFIX_PATTERN.sub("", str(entry_id))
+
+
+def unsupported_gibbs_elements(elements: List[str]) -> List[str]:
+    """
+    List elements that have no finite-temperature reference data in pymatgen.
+
+    Args:
+        elements: Element symbols, e.g. ["Ac", "Fe"].
+
+    Returns:
+        Sorted symbols missing from the elemental Gibbs energy table.
+    """
+    supported = set(next(iter(G_ELEMS.values())))
+    return sorted(set(elements) - supported)
 
 
 def subsystem_chemsys(elements: List[str]) -> List[str]:
@@ -151,29 +165,36 @@ class MaterialsProjectClient:
         """
         thermo_types = self.get_functional_mapping(functional)
         additional_criteria = {"thermo_types": thermo_types}
+
+        if temperature > 0:
+            missing = unsupported_gibbs_elements(elements)
+            if missing:
+                raise ValueError(
+                    "Finite-temperature data is not available for "
+                    f"{', '.join(missing)}. Use 0 K or remove these elements."
+                )
         
         logger.info(f"Fetching entries for elements: {elements}, T={temperature}K, functional={functional}")
         
         try:
             with self.get_client() as client:
-                if temperature == 0:
-                    entries = client.get_entries_in_chemsys(
-                        elements,
-                        additional_criteria=additional_criteria
-                    )
-                else:
-                    entries = client.get_entries_in_chemsys(
-                        elements,
-                        use_gibbs=temperature,
-                        additional_criteria=additional_criteria
-                    )
-            
+                # Always fetch the 0 K entries first. Licenses are filtered before the
+                # finite-temperature conversion, which uses the elemental reference
+                # entries: a non-commercial elemental phase must not become a reference.
+                entries = client.get_entries_in_chemsys(
+                    elements,
+                    additional_criteria=additional_criteria
+                )
+
                 excluded = 0
                 if not include_non_commercial:
                     blocked = self.fetch_non_commercial_ids(client, elements)
                     kept = [e for e in entries if base_material_id(e.entry_id) not in blocked]
                     excluded = len(entries) - len(kept)
                     entries = kept
+
+            if temperature > 0 and entries:
+                entries = GibbsComputedStructureEntry.from_entries(entries, temp=temperature)
 
             logger.info(
                 f"Retrieved {len(entries)} entries from Materials Project "

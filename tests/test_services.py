@@ -213,15 +213,35 @@ def test_fetch_entries_fails_closed_when_license_lookup_fails():
         client.fetch_entries(["Fe", "O"], 0, "R2SCAN")
 
 
-def test_fetch_entries_applies_to_gibbs_entries():
-    """Finite-temperature requests are filtered with the same ID matching."""
+def test_fetch_entries_filters_before_gibbs_conversion():
+    """Licenses are filtered on the 0 K entries, then only the kept ones become Gibbs entries."""
+    from unittest.mock import patch
+
     docs = [_license_doc("mp-3", "BY-NC")]
     client, mp = _client_with_mock_mp(ENTRIES, docs)
 
-    entries, excluded = client.fetch_entries(["Fe", "O"], 1000, "R2SCAN")
+    with patch("app.services.materials_client.GibbsComputedStructureEntry") as gibbs:
+        gibbs.from_entries.side_effect = lambda entries, temp: list(entries)
+        entries, excluded = client.fetch_entries(["Fe", "O"], 1000, "R2SCAN")
 
     assert excluded == 1
-    assert mp.get_entries_in_chemsys.call_args.kwargs["use_gibbs"] == 1000
+    assert "use_gibbs" not in mp.get_entries_in_chemsys.call_args.kwargs
+    passed = gibbs.from_entries.call_args.args[0]
+    assert {str(e.entry_id) for e in passed} == {"mp-1-GGA", "mp-2-GGA", "mp-4-r2SCAN"}
+    assert gibbs.from_entries.call_args.kwargs["temp"] == 1000
+    assert len(entries) == 3
+
+
+def test_fetch_entries_rejects_elements_without_finite_temperature_data():
+    """Elements missing from pymatgen's Gibbs table give a clear error before any request."""
+    client, mp = _client_with_mock_mp(ENTRIES, [])
+
+    with pytest.raises(ValueError, match="Finite-temperature data is not available for Ac"):
+        client.fetch_entries(["Ac", "Fe"], 1000, "R2SCAN")
+
+    mp.get_entries_in_chemsys.assert_not_called()
+    # 0 K does not use the table, so the same elements are accepted there.
+    client.fetch_entries(["Ac", "Fe"], 0, "R2SCAN", include_non_commercial=True)
 
 
 def test_missing_terminal_after_exclusion_gives_clear_error():
