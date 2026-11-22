@@ -116,7 +116,13 @@ def _terminal_labels(hull: CompoundHull) -> List[str]:
 
 
 def _marker_group(
-    name: str, points: Sequence[Point], above: np.ndarray, hull: CompoundHull, cutoff: float, stable: bool
+    name: str,
+    points: Sequence[Point],
+    above: np.ndarray,
+    hull: CompoundHull,
+    cutoff: float,
+    stable: bool,
+    scale: float = 1.0,
 ) -> Dict[str, Any]:
     """
     Marker properties shared by every dimensionality.
@@ -128,20 +134,21 @@ def _marker_group(
         hull: The phase diagram.
         cutoff: Upper limit of the colour scale (eV/atom).
         stable: True for the stable group.
+        scale: Factor applied to the marker sizes (3D markers look larger than 2D ones).
 
     Returns:
         Keys to merge into a Plotly trace.
     """
     marker: Dict[str, Any]
     if stable:
-        marker = {"color": STABLE_COLOR, "size": 12, "symbol": "circle", "line": {"color": "#ffffff", "width": 1}}
+        marker = {"color": STABLE_COLOR, "size": 12 * scale, "symbol": "circle", "line": {"color": "#ffffff", "width": 1}}
     else:
         marker = {
             "color": [float(v) for v in above],
             "colorscale": COLORSCALE,
             "cmin": 0.0,
             "cmax": max(cutoff, 1e-6),
-            "size": 7,
+            "size": 7 * scale,
             "symbol": "diamond",
             "colorbar": {"title": {"text": COLORBAR_TITLE}, "thickness": 14, "len": 0.6},
         }
@@ -258,6 +265,25 @@ def _ternary_label_position(point: Point) -> str:
     return "top center"
 
 
+def _padded_label(point: Point) -> str:
+    """
+    Format a phase label with room for the marker on the side it is attached to.
+
+    Args:
+        point: A stable phase.
+
+    Returns:
+        HTML label with non-breaking spaces next to the marker.
+    """
+    label = htmlify(point.entry.formula)
+    position = _ternary_label_position(point)
+    if position == "middle right":
+        return "   " + label
+    if position == "middle left":
+        return label + "   "
+    return label
+
+
 def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
     """Triangular composition diagram."""
     unstable, above = _unstable(hull, cutoff)
@@ -286,7 +312,7 @@ def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
         {"type": "scatterternary", "mode": "markers", **abc(unstable),
          **_marker_group("Above Hull", unstable, above, hull, cutoff, False)},
         {"type": "scatterternary", "mode": "text", "name": "Labels (stable)", **abc(inner),
-         "text": [htmlify(p.entry.formula) for p in inner],
+         "text": [_padded_label(p) for p in inner],
          "textposition": [_ternary_label_position(p) for p in inner],
          "textfont": {"size": 11}, "hoverinfo": "skip", "showlegend": False},
     ]
@@ -329,9 +355,9 @@ def _quaternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
         {"type": "scatter3d", "mode": "lines", **segments(ties), "line": {"color": LINE_COLOR, "width": 3},
          "hoverinfo": "none", "showlegend": False},
         {"type": "scatter3d", "mode": "markers", **xyz(stable),
-         **_marker_group("Stable", stable, np.zeros(len(stable)), hull, cutoff, True)},
+         **_marker_group("Stable", stable, np.zeros(len(stable)), hull, cutoff, True, scale=0.5)},
         {"type": "scatter3d", "mode": "markers", **xyz(unstable),
-         **_marker_group("Above Hull", unstable, above, hull, cutoff, False)},
+         **_marker_group("Above Hull", unstable, above, hull, cutoff, False, scale=0.5)},
         {"type": "scatter3d", "mode": "text", "name": "Labels (stable)", **xyz(inner),
          "text": [htmlify(p.entry.formula) for p in inner], "textfont": {"size": 11},
          "hoverinfo": "skip", "showlegend": False},

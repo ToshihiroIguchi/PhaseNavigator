@@ -19,6 +19,16 @@ This project uses the following third-party libraries and services:
 |---------|---------|---------|
 | Plotly.js | MIT | Interactive plotting (bundled with the plotly Python package and served locally from `/vendor/plotly.min.js`; no CDN) |
 
+## Static Edition (browser calculation)
+
+| Component | License | Purpose |
+|-----------|---------|---------|
+| Pyodide | MPL-2.0 | Python in the browser, loaded from the jsDelivr CDN (pinned version, integrity-checked loader) |
+| NumPy / SciPy (Pyodide builds) | BSD-3-Clause | Numerics and the convex hull (qhull) |
+| `phasecore/data/*.json` | MIT (copied from pymatgen) | Elemental Gibbs energies, NIST-JANAF gas data and atomic masses; regenerate with `python -m scripts.export_reference_tables` |
+
+The finite-temperature model is the descriptor of Bartel et al., Nature Communications 9, 4168 (2018).
+
 ## External Services
 
 | Service | Terms | Purpose |
@@ -46,7 +56,9 @@ Data from the Materials Project is subject to the Materials Project Terms of Use
 
 ## Compliance Notes
 
-- This software does not redistribute Materials Project data
-- Data is accessed via official API only
-- No local caching of proprietary data
+- The repository does not contain Materials Project data. The server edition accesses data through the
+  official API only, with no caching
+- The static edition needs data files that you download yourself with `scripts/build_static_data.py` (CC BY 4.0
+  materials only; unknown licenses are excluded). They are git-ignored. Before publishing a site that
+  contains them, check the Materials Project terms and contact the Materials Project, as noted above
 - Users are responsible for complying with all applicable terms of service

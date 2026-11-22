@@ -143,6 +143,27 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 - **Superconductors**: `Y2O3, BaCO3, CuO`
 - **Photovoltaics**: `CdTe, CdS, ZnS`
 
+## 🌐 Static Edition (no server, no API key)
+
+The same page can run without a server. The data is downloaded once with a script and the calculation runs in the browser through [Pyodide](https://pyodide.org/) (`phasecore/` uses only NumPy and SciPy). Visitors do not need an API key.
+
+```bash
+# 1. Download the data (CC BY 4.0 materials only). Keep the key file outside the repository.
+python -m scripts.build_static_data --key-file /path/to/key.txt --elements Al,C,Fe,H,O
+# 2. Build the site and serve it
+python -m scripts.build_static_site
+python -m http.server --directory static_site 8080
+```
+
+Use the project virtual environment's Python (`venv\Scripts\python.exe` / `venv/bin/python`).
+
+- `--elements` (at most 9) downloads those elements and all their subsystems; a diagram can only use those elements. `--all` downloads everything and takes a long time (about 150,000-180,000 entries per thermo type); Materials Project also publishes bulk data on AWS Open Data.
+- Materials whose license is not CC BY (for example GNoME) or cannot be determined are left out.
+- The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
+- The data files and `static_site/` are git-ignored. **Before publishing a site that contains Materials Project data, check the Materials Project terms and contact them** (see `DEPENDENCIES.md`).
+- `tests/test_phasecore.py` compares `phasecore` with the pymatgen server code path (stable phases, energies, finite temperature including gases, up to four terminals).
+- Known differences from the server edition: the figures are drawn by `phasecore` rather than pymatgen's `PDPlotter` (same style, not identical); when several polymorphs have the same energy (for example experimental gas data), the static edition picks the lowest entry ID deterministically.
+
 ## 🛠️ Technical Details
 
 ### Architecture
