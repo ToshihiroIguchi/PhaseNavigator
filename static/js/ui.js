@@ -549,7 +549,9 @@ class UIManager {
 
       if (!this.isStatic) {
         apiKey = this.elements.apiInput.value.trim();
-        includeNonCommercial = this.elements.nonCommercialToggle.checked;
+        // The toggle is absent unless the server allows non-commercial data
+        includeNonCommercial = Boolean(this.elements.nonCommercialToggle
+          && this.elements.nonCommercialToggle.checked);
 
         if (!apiKey) {
           throw new Error('Materials Project API key is required');

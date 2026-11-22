@@ -115,9 +115,9 @@ def _fake_diagram_response():
 
 @pytest.mark.parametrize("payload_extra, expected", [({}, False), ({"include_non_commercial": True}, True)])
 def test_diagram_endpoint_passes_non_commercial_flag(payload_extra, expected):
-    """The flag defaults to False and is forwarded to the analyzer when set."""
+    """The flag defaults to False and is forwarded to the analyzer when allowed at startup."""
     payload = {"f": ["Fe2O3", "Al2O3"], **payload_extra}
-    with patch("app.api.diagrams.PhaseAnalyzer") as analyzer_cls:
+    with patch("app.api.diagrams.settings.allow_non_commercial", True),             patch("app.api.diagrams.PhaseAnalyzer") as analyzer_cls:
         analyzer_cls.return_value.generate_phase_diagram.return_value = _fake_diagram_response()
         response = client.post(
             "/api/diagrams/", json=payload,
@@ -129,8 +129,29 @@ def test_diagram_endpoint_passes_non_commercial_flag(payload_extra, expected):
     assert kwargs["include_non_commercial"] is expected
 
 
+def test_diagram_endpoint_rejects_non_commercial_when_disabled():
+    """Without the startup option, requesting non-commercial data is refused."""
+    payload = {"f": ["Fe2O3", "Al2O3"], "include_non_commercial": True}
+    with patch("app.api.diagrams.settings.allow_non_commercial", False),             patch("app.api.diagrams.PhaseAnalyzer") as analyzer_cls:
+        response = client.post(
+            "/api/diagrams/", json=payload,
+            headers={"X-API-KEY": "abcdefghijklmnopqrstuvwxyz123456"},
+        )
+
+    assert response.status_code == 403
+    analyzer_cls.return_value.generate_phase_diagram.assert_not_called()
+
+
+def test_index_page_hides_non_commercial_toggle_by_default():
+    """The option is absent from the page unless enabled at startup."""
+    with patch("app.main.settings.allow_non_commercial", False):
+        html = client.get("/").text
+    assert 'id="include-non-commercial"' not in html
+
+
 def test_index_page_has_non_commercial_toggle_off_by_default():
-    """The opt-in switch is present and not pre-checked."""
-    html = client.get("/").text
+    """When enabled at startup the opt-in switch is present and not pre-checked."""
+    with patch("app.main.settings.allow_non_commercial", True):
+        html = client.get("/").text
     assert 'id="include-non-commercial"' in html
     assert "checked" not in html.split('id="include-non-commercial"')[1].split(">")[0]

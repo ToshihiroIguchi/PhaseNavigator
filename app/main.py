@@ -152,7 +152,11 @@ async def plotly_js():
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """Render the main application page."""
-    return templates.TemplateResponse(request=request, name="index.html")
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"allow_non_commercial": settings.allow_non_commercial},
+    )
 
 
 @app.post("/diagram", response_class=HTMLResponse)
@@ -192,6 +196,7 @@ async def diagram_form(
                 "temp": api_request.temperature,
                 "e_cut": api_request.energy_cutoff,
                 "functional": api_request.functional,
+                "allow_non_commercial": settings.allow_non_commercial,
             }
         )
         

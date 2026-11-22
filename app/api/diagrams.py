@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 
+from ..core.config import settings
 from ..core.logging import get_logger
 from ..core.security import hash_api_key, create_rate_limit_key, validate_api_key
 from ..models.requests import DiagramRequest
@@ -33,6 +34,15 @@ async def generate_diagram(
     This endpoint creates a phase diagram using Materials Project data
     and returns both the plot data and detailed phase information.
     """
+    # Non-commercial (GNoME) data is unavailable unless enabled at server startup
+    if request.include_non_commercial and not settings.allow_non_commercial:
+        logger.warning(f"Rejected non-commercial request (disabled at startup) from IP: {client_ip}")
+        raise HTTPException(
+            status_code=403,
+            detail="Non-commercial data is disabled on this server. "
+                   "Start the server with ALLOW_NON_COMMERCIAL=1 to enable it."
+        )
+
     # Validate API key format
     if not validate_api_key(x_api_key):
         logger.warning(f"Invalid API key format from IP: {client_ip}")
