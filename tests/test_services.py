@@ -47,7 +47,8 @@ def test_materials_client_functional_mapping():
     client = MaterialsProjectClient("dummy_key")
     
     # Valid functionals
-    assert client.get_functional_mapping("GGA_GGA_U_R2SCAN") == ["GGA_GGA+U", "R2SCAN"]
+    # One joint thermo type: separate GGA and R2SCAN types would duplicate materials.
+    assert client.get_functional_mapping("GGA_GGA_U_R2SCAN") == ["GGA_GGA+U_R2SCAN"]
     assert client.get_functional_mapping("R2SCAN") == ["R2SCAN"]
     assert client.get_functional_mapping("GGA_GGA_U") == ["GGA_GGA+U"]
     

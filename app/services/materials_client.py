@@ -72,9 +72,16 @@ class MaterialsProjectClient:
         return sorted(elements)
     
     def get_functional_mapping(self, functional: str) -> List[str]:
-        """Map functional name to Materials Project thermo types."""
+        """
+        Map functional name to Materials Project thermo types.
+
+        The mixed option uses the single joint thermo type, so each material appears
+        once and all energies share one corrected scale. Requesting the GGA/GGA+U and
+        R2SCAN types separately would return the same material twice on different
+        energy scales.
+        """
         functional_map = {
-            "GGA_GGA_U_R2SCAN": ["GGA_GGA+U", "R2SCAN"],
+            "GGA_GGA_U_R2SCAN": ["GGA_GGA+U_R2SCAN"],
             "R2SCAN": ["R2SCAN"],
             "GGA_GGA_U": ["GGA_GGA+U"]
         }
