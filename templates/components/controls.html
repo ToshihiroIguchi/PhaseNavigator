@@ -1,12 +1,17 @@
 <!-- Control Panel -->
 <div id="controls">
   <header>
-    <img src="/static/logo.png" alt="Phase Navigator Logo" />
+    <img src="{{ static_prefix }}/logo.png" alt="Phase Navigator Logo" />
     <h1>Phase Navigator</h1>
   </header>
 
   <div class="info-compact">
-    Generate solid phase diagrams using Materials Project data. <strong>Note:</strong> Only solid phases are calculated (liquids and gases are not included).
+    {% if static_edition %}
+    Generate solid phase diagrams from a downloaded Materials Project data snapshot. Everything is calculated in your browser, and no API key is needed.
+    {% else %}
+    Generate solid phase diagrams using Materials Project data.
+    {% endif %}
+    <strong>Note:</strong> Only solid phases are calculated (liquids and gases are not included).
   </div>
 
   <!-- Chemical Formulas -->
@@ -24,6 +29,7 @@
     <small class="hint" id="formulas-hint">Enter 2–4 formulas separated by commas</small>
   </div>
 
+  {% if not static_edition %}
   <!-- Materials Project API Key -->
   <div class="form-group">
     <label for="api-key">Materials Project API Key</label>
@@ -44,6 +50,7 @@
       <a href="https://materialsproject.org/api" target="_blank" rel="noopener noreferrer">Materials Project</a>
     </div>
   </div>
+  {% endif %}
 
   <!-- Temperature Controls -->
   <div class="toggle-container">
@@ -110,6 +117,9 @@
   </div>
   <small class="hint" id="e-cut-hint">The energy cutoff also plots unstable phases up to this energy above the hull. The table lists stable phases only.</small>
 
+  {% if static_edition %}
+  <small class="hint" id="non-commercial-hint">Only CC BY 4.0 data is used. Non-commercial (CC BY-NC) data such as GNoME is not included.</small>
+  {% else %}
   <!-- Non-commercial data (GNoME) is excluded unless this is switched on -->
   <div class="toggle-container">
     <span class="toggle-switch">
@@ -120,6 +130,7 @@
     <label class="toggle-label" for="include-non-commercial">Include non-commercial data (GNoME, CC BY-NC 4.0)</label>
   </div>
   <small class="hint" id="non-commercial-hint">Off by default. GNoME-derived entries may be used for non-commercial purposes only.</small>
+  {% endif %}
 
   <!-- Hidden input for final temperature value -->
   <input type="hidden" id="temp" name="temp" value="{{ temp or 0 }}">
@@ -134,6 +145,10 @@
   </button>
 
   <div class="info">
+    {% if static_edition %}
+    <strong>Note:</strong> The first calculation downloads the calculation engine (about 30 MB); later ones are much faster.
+    {% else %}
     <strong>Note:</strong> Quaternary systems can take up to about a minute.
+    {% endif %}
   </div>
 </div>

@@ -233,6 +233,31 @@ def _binary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
     return {"data": data, "layout": layout}
 
 
+def _ternary_label_position(point: Point) -> str:
+    """
+    Choose where to put a phase label so it stays inside the triangle.
+
+    Labels centred on a point of the left or right edge would be cut off by the plot
+    area, so they are placed towards the inside. In Plotly's ternary layout the first
+    terminal is the top corner, the second the bottom-left and the third the bottom-right.
+
+    Args:
+        point: A stable phase.
+
+    Returns:
+        A Plotly ``textposition`` value.
+    """
+    top, left, right = (float(v) for v in point.fractions[:3])
+    if left + right < 1e-8:
+        return "top center"
+    horizontal = right + top / 2  # 0 at the left edge, 1 at the right edge
+    if right < 1e-3 or horizontal < 0.5 and top > 0.02:
+        return "middle right"
+    if left < 1e-3 or horizontal >= 0.5 and top > 0.02:
+        return "middle left"
+    return "top center"
+
+
 def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
     """Triangular composition diagram."""
     unstable, above = _unstable(hull, cutoff)
@@ -261,7 +286,8 @@ def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
         {"type": "scatterternary", "mode": "markers", **abc(unstable),
          **_marker_group("Above Hull", unstable, above, hull, cutoff, False)},
         {"type": "scatterternary", "mode": "text", "name": "Labels (stable)", **abc(inner),
-         "text": [htmlify(p.entry.formula) for p in inner], "textposition": "top center",
+         "text": [htmlify(p.entry.formula) for p in inner],
+         "textposition": [_ternary_label_position(p) for p in inner],
          "textfont": {"size": 11}, "hoverinfo": "skip", "showlegend": False},
     ]
     labels = _terminal_labels(hull)

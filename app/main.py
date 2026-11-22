@@ -71,6 +71,11 @@ templates = Jinja2Templates(directory="templates")
 PLOTLY_JS_PATH = Path(plotly.__file__).parent / "package_data" / "plotly.min.js"
 templates.env.globals["plotly_js_version"] = get_plotlyjs_version()
 templates.env.globals["app_version"] = settings.app_version
+# Asset locations are variables so the static edition (scripts/build_static_site.py)
+# can render the same templates with relative paths.
+templates.env.globals["static_edition"] = False
+templates.env.globals["static_prefix"] = "/static"
+templates.env.globals["vendor_prefix"] = "/vendor"
 
 # Include API routers
 app.include_router(diagrams_router, prefix="/api")

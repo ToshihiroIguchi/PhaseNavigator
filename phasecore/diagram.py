@@ -118,6 +118,13 @@ def generate_diagram(
                 "Use 0 K or remove these elements."
             )
 
+    scope = dataset.meta.get("scope", "all")
+    if scope != "all" and not set(elements) <= set(scope):
+        raise ValueError(
+            f"This data build covers only {', '.join(scope)}. "
+            f"Remove {', '.join(sorted(set(elements) - set(scope)))} or use a build that includes it."
+        )
+
     entries = dataset.select(elements)
     if not entries:
         raise ValueError(f"No materials found for elements {elements} in the bundled data")
@@ -137,6 +144,6 @@ def generate_diagram(
             "num_phases": len(rows),
             "excluded_non_commercial": 0,
             "include_non_commercial": False,
-            "data": {key: dataset.meta.get(key) for key in ("thermo_type", "retrieved_at", "database_version")},
+            "data": {key: dataset.meta.get(key) for key in ("thermo_type", "retrieved_at", "database_version", "scope")},
         },
     }

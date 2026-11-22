@@ -13,7 +13,7 @@
     <!-- Shown only while a request is in flight -->
     <div id="status" class="status-panel" role="status" hidden>
       <div class="loading-spinner" aria-hidden="true"></div>
-      <span>Fetching data and building the diagram… <span id="status-elapsed">0 s</span></span>
+      <span><span id="status-text">Fetching data and building the diagram…</span> <span id="status-elapsed">0 s</span></span>
     </div>
 
     <div id="empty-state" class="empty-state">
@@ -34,9 +34,10 @@
     licensed under
     <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
     (see the <a href="https://next-gen.materialsproject.org/about/terms" target="_blank" rel="noopener noreferrer">terms of use</a>).
-    Changes were made: entries are retrieved through the Materials Project API, may include empirical energy
+    Changes were made: entries {% if static_edition %}were downloaded in advance, {% else %}are retrieved through the Materials Project API, {% endif %}may include empirical energy
     corrections, are converted to Gibbs free energies at finite temperature, and are re-analyzed here to build
     the phase diagram. This site is not endorsed by the Materials Project.
+    {% if static_edition %}<span id="data-snapshot"></span>{% endif %}
   </p>
   <p>
     Please cite
@@ -44,11 +45,20 @@
     and
     <a href="https://doi.org/10.1063/1.4812323" target="_blank" rel="noopener noreferrer">Jain et al., APL Materials 1, 011002 (2013)</a>;
     see the &ldquo;How to Cite&rdquo; page on the Materials Project website for tool-specific references.
+    Free energies at finite temperature use the descriptor of
+    <a href="https://doi.org/10.1038/s41467-018-06682-4" target="_blank" rel="noopener noreferrer">Bartel et al., Nature Communications 9, 4168 (2018)</a>.
   </p>
+  {% if static_edition %}
+  <p>
+    GNoME-derived data (Merchant et al., Nature, 2023) is licensed under CC BY-NC 4.0 for non-commercial use only
+    and is not included in this edition.
+  </p>
+  {% else %}
   <p>
     GNoME-derived data (Merchant et al., Nature, 2023) is licensed under CC BY-NC 4.0 and is for non-commercial use only.
     It is excluded by default and is used only when you enable &ldquo;Include non-commercial data&rdquo;.
   </p>
+  {% endif %}
   <p>
     This software is released under the
     <a href="https://github.com/ToshihiroIguchi/PhaseNavigator/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT License</a>.

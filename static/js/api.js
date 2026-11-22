@@ -7,7 +7,12 @@ const API_BASE_URL = '/api';
 /**
  * Make API request to generate phase diagram
  */
-async function generatePhaseDiagram(data, apiKey) {
+async function generatePhaseDiagram(data, apiKey, onStatus) {
+  // The static edition calculates in the browser instead of calling the server.
+  if (document.body.dataset.edition === 'static') {
+    return StaticEngine.generate(data, onStatus);
+  }
+
   let response;
   try {
     response = await fetch(`${API_BASE_URL}/diagrams/`, {

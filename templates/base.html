@@ -4,24 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Phase Navigator{% endblock %}</title>
-  <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="{{ static_prefix }}/favicon.ico">
   
   <!-- plotly.js bundled with the Python plotly package (served locally) -->
-  <script src="/vendor/plotly.min.js?v={{ plotly_js_version }}"></script>
+  <script src="{{ vendor_prefix }}/plotly.min.js?v={{ plotly_js_version }}"></script>
   
   <!-- CSS -->
-  <link rel="stylesheet" href="/static/css/main.css?v=1.1.1">
-  <link rel="stylesheet" href="/static/css/components.css?v=1.1.1">
+  <link rel="stylesheet" href="{{ static_prefix }}/css/main.css?v=1.1.1">
+  <link rel="stylesheet" href="{{ static_prefix }}/css/components.css?v=1.1.1">
   
   {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% if static_edition %} data-edition="static"{% endif %}>
   {% block content %}{% endblock %}
   
   <!-- JavaScript -->
-  <script src="/static/js/utils.js?v=1.0.5"></script>
-  <script src="/static/js/api.js?v=1.0.2"></script>
-  <script src="/static/js/ui.js?v=1.0.8"></script>
+  {% if static_edition %}
+  <!-- Pyodide (Python in the browser) from a pinned release; the integrity hash guards the loader script -->
+  <script src="{{ pyodide_url }}pyodide.js" integrity="{{ pyodide_sri }}" crossorigin="anonymous" defer></script>
+  {% endif %}
+  <script src="{{ static_prefix }}/js/utils.js?v=1.0.5"></script>
+  <script src="{{ static_prefix }}/js/api.js?v=1.0.3"></script>
+  {% if static_edition %}
+  <script src="{{ static_prefix }}/js/static_engine.js?v=1.0.0" data-pyodide-url="{{ pyodide_url }}"></script>
+  {% endif %}
+  <script src="{{ static_prefix }}/js/ui.js?v=1.0.9"></script>
   
   {% block extra_js %}{% endblock %}
 </body>

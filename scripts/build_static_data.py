@@ -200,6 +200,7 @@ def build_dataset(
     chemsys: Optional[List[str]],
     limit: Optional[int] = None,
     log: Any = print,
+    scope: Any = "all",
 ) -> Dict[str, Any]:
     """
     Download and convert the entries of one thermo type.
@@ -210,6 +211,7 @@ def build_dataset(
         chemsys: Chemical systems to restrict to, or ``None`` for everything.
         limit: Stop after this many materials (for smoke tests).
         log: Function used for progress messages.
+        scope: ``"all"`` or the list of elements the download covers.
 
     Returns:
         The dataset payload ready to be written as JSON.
@@ -238,6 +240,7 @@ def build_dataset(
         "functional": functional,
         "license": "CC BY 4.0",
         "source": "Materials Project",
+        "scope": scope,
         "retrieved_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "count": len(records),
         "excluded_by_license": excluded,
@@ -315,9 +318,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         Process exit code.
     """
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    scope = parser.add_mutually_exclusive_group(required=True)
-    scope.add_argument("--elements", help="Comma-separated elements; includes all their subsystems (max 9).")
-    scope.add_argument("--all", action="store_true", help="Download every material (very slow).")
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--elements", help="Comma-separated elements; includes all their subsystems (max 9).")
+    group.add_argument("--all", action="store_true", help="Download every material (very slow).")
     parser.add_argument("--out", default="static_site/data", help="Output directory.")
     parser.add_argument("--key-file", help="Text file holding the API key (outside the repository).")
     parser.add_argument(
@@ -327,11 +330,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     chemsys: Optional[List[str]] = None
+    scope: Any = "all"
     if args.elements:
-        elements = [e.strip() for e in args.elements.split(",") if e.strip()]
-        if len(set(elements)) > MAX_ELEMENTS_FOR_SUBSET_QUERY:
+        elements = sorted({e.strip() for e in args.elements.split(",") if e.strip()})
+        if len(elements) > MAX_ELEMENTS_FOR_SUBSET_QUERY:
             raise SystemExit(f"--elements accepts at most {MAX_ELEMENTS_FOR_SUBSET_QUERY} elements; use --all.")
         chemsys = subsystem_chemsys(elements)
+        scope = elements
 
     functionals = [f.strip() for f in args.functionals.split(",") if f.strip()]
     unknown = [f for f in functionals if f not in DATASETS]
@@ -344,7 +349,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     manifest: Dict[str, Any] = {
         "schema": SCHEMA_VERSION,
         "built_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "scope": "all" if chemsys is None else sorted({e for system in chemsys for e in system.split("-")}),
+        "scope": scope,
         "tools": tool_versions(),
         "datasets": {},
     }
@@ -354,7 +359,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         except Exception:  # noqa: BLE001 - the version is informational only
             manifest["database_version"] = None
         for functional in functionals:
-            payload = build_dataset(client, functional, chemsys, args.limit)
+            payload = build_dataset(client, functional, chemsys, args.limit, scope=scope)
             payload["database_version"] = manifest["database_version"]
             info = write_gzip_json(out_dir / DATASETS[functional]["file"], payload)
             manifest["datasets"][functional] = {

@@ -6,10 +6,16 @@ class UIManager {
   constructor() {
     this.isSubmitting = false;
     this.statusTimer = null;
+    // The static edition has no API key and runs the calculation in the browser.
+    this.isStatic = document.body.dataset.edition === 'static';
     this.elements = this.initializeElements();
     this.initializeEventListeners();
     this.initializeTemperatureControls();
-    this.restoreApiKeyFromStorage();
+    if (this.isStatic) {
+      this.initializeStaticEdition();
+    } else {
+      this.restoreApiKeyFromStorage();
+    }
   }
 
   initializeElements() {
@@ -40,6 +46,7 @@ class UIManager {
       plotDiv: document.getElementById('plot'),
       messageBox: document.getElementById('message'),
       statusBox: document.getElementById('status'),
+      statusText: document.getElementById('status-text'),
       statusElapsed: document.getElementById('status-elapsed'),
       emptyState: document.getElementById('empty-state'),
       
@@ -70,10 +77,12 @@ class UIManager {
     this.elements.tempInput.addEventListener('input', () => this.validateTemperatureInput());
     this.elements.tempInput.addEventListener('blur', () => this.validateTemperatureInput());
     
-    // API key management
-    this.elements.apiInput.addEventListener('input', debounce(() => this.handleApiKeyChange(), 500));
-    this.elements.apiKeyToggle.addEventListener('click', () => this.toggleApiKeyVisibility());
-    this.elements.apiKeyClear.addEventListener('click', () => this.handleApiKeyClear());
+    // API key management (not present in the static edition)
+    if (!this.isStatic) {
+      this.elements.apiInput.addEventListener('input', debounce(() => this.handleApiKeyChange(), 500));
+      this.elements.apiKeyToggle.addEventListener('click', () => this.toggleApiKeyVisibility());
+      this.elements.apiKeyClear.addEventListener('click', () => this.handleApiKeyClear());
+    }
     
     // Form input changes
     this.elements.formulasInput.addEventListener('input', () => this.handleFormInputChange());
@@ -90,6 +99,37 @@ class UIManager {
     this.updateTemperatureDisplay(true); // Kelvin display
     this.updateTemperatureConversion();
     this.updateUnitLabels(true); // Set initial active state
+  }
+
+  /**
+   * Prepare the static edition: show which data snapshot is bundled, disable the
+   * functionals that have no data, and warm up the calculation engine once the
+   * user starts typing.
+   */
+  async initializeStaticEdition() {
+    this.elements.formulasInput.addEventListener('focus', () => StaticEngine.preload(), { once: true });
+    try {
+      const manifest = await StaticEngine.loadManifest();
+      const available = Object.keys(manifest.datasets || {});
+      const select = this.elements.functionalSelect;
+      Array.from(select.options).forEach((option) => {
+        option.disabled = !available.includes(option.value);
+      });
+      if (select.selectedOptions[0] && select.selectedOptions[0].disabled) {
+        const firstEnabled = Array.from(select.options).find((option) => !option.disabled);
+        if (firstEnabled) select.value = firstEnabled.value;
+      }
+
+      const snapshot = document.getElementById('data-snapshot');
+      if (snapshot) {
+        const built = (manifest.built_at || '').slice(0, 10);
+        const version = manifest.database_version ? `database version ${manifest.database_version}, ` : '';
+        const scope = Array.isArray(manifest.scope) ? ` Elements covered: ${manifest.scope.join(', ')}.` : '';
+        snapshot.textContent = `Data snapshot: ${version}downloaded ${built}.${scope}`;
+      }
+    } catch (error) {
+      this.showError(error.message);
+    }
   }
 
   async restoreApiKeyFromStorage() {
@@ -325,12 +365,21 @@ class UIManager {
    */
   showStatus() {
     const start = Date.now();
+    this.setStatusText('Fetching data and building the diagram…');
     this.elements.statusElapsed.textContent = '0 s';
     this.elements.statusBox.hidden = false;
     this.elements.plotDiv.classList.add('is-stale');
     this.statusTimer = setInterval(() => {
       this.elements.statusElapsed.textContent = `${Math.round((Date.now() - start) / 1000)} s`;
     }, 1000);
+  }
+
+  /**
+   * Replace the message of the busy panel.
+   * @param {string} text - New message (inserted as plain text).
+   */
+  setStatusText(text) {
+    this.elements.statusText.textContent = text;
   }
 
   /** Hide the busy panel and stop the elapsed-time counter. */
@@ -420,9 +469,17 @@ class UIManager {
       'No empirical energy corrections were applied to these entries.';
     
     const excluded = metadata.excluded_non_commercial || 0;
-    const licenseNote = metadata.include_non_commercial ?
-      'Non-commercial (CC BY-NC 4.0) entries may be included. Use for non-commercial purposes only.' :
-      `CC BY 4.0 data only (${excluded} non-commercial ${excluded === 1 ? 'entry' : 'entries'} excluded).`;
+    let licenseNote;
+    if (metadata.include_non_commercial) {
+      licenseNote = 'Non-commercial (CC BY-NC 4.0) entries may be included. Use for non-commercial purposes only.';
+    } else if (metadata.data) {
+      // Static edition: the data was filtered when it was downloaded.
+      const retrieved = (metadata.data.retrieved_at || '').slice(0, 10);
+      const version = metadata.data.database_version ? `, database version ${metadata.data.database_version}` : '';
+      licenseNote = `CC BY 4.0 data only. Materials Project snapshot downloaded ${retrieved}${version}.`;
+    } else {
+      licenseNote = `CC BY 4.0 data only (${excluded} non-commercial ${excluded === 1 ? 'entry' : 'entries'} excluded).`;
+    }
 
     const summaryLine = (label, text) => {
       const strong = document.createElement('strong');
@@ -484,25 +541,32 @@ class UIManager {
     try {
       // Validate inputs
       const formulas = validateFormulas(this.elements.formulasInput.value);
-      const apiKey = this.elements.apiInput.value.trim();
       const eCut = parseFloat(this.elements.eCutInput.value) || 0.2;
       const functional = this.elements.functionalSelect.value;
       const temperature = parseInt(this.elements.finalTempInput.value, 10) || 0;
-      const includeNonCommercial = this.elements.nonCommercialToggle.checked;
+      let apiKey = '';
+      let includeNonCommercial = false;
 
-      if (!apiKey) {
-        throw new Error('Materials Project API key is required');
-      }
+      if (!this.isStatic) {
+        apiKey = this.elements.apiInput.value.trim();
+        includeNonCommercial = this.elements.nonCommercialToggle.checked;
 
-      if (!isValidApiKey(apiKey)) {
-        throw new Error('Invalid API key format. Please check your Materials Project API key.');
+        if (!apiKey) {
+          throw new Error('Materials Project API key is required');
+        }
+
+        if (!isValidApiKey(apiKey)) {
+          throw new Error('Invalid API key format. Please check your Materials Project API key.');
+        }
       }
 
       // Lock the button before any await so a double click cannot send two requests.
       this.setLoadingState(true);
       this.showStatus();
 
-      await saveApiKey(apiKey);
+      if (!this.isStatic) {
+        await saveApiKey(apiKey);
+      }
 
       const requestData = {
         f: formulas,
@@ -512,7 +576,7 @@ class UIManager {
         include_non_commercial: includeNonCommercial
       };
 
-      const response = await generatePhaseDiagram(requestData, apiKey);
+      const response = await generatePhaseDiagram(requestData, apiKey, (text) => this.setStatusText(text));
 
       const plotData = response.plot || response;
       const phaseInfo = response.phase_info || [];
