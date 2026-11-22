@@ -1,10 +1,10 @@
 from typing import List
 from mp_api.client import MPRester
-from pymatgen.core.composition import Composition
 from pymatgen.entries.computed_entries import ComputedEntry
 
 from ..core.logging import get_logger
 from ..core.config import settings
+from .formula_parser import parse_formula
 
 logger = get_logger(__name__)
 
@@ -26,13 +26,9 @@ class MaterialsProjectClient:
         """Extract unique element symbols from chemical formulas."""
         elements = set()
         for formula in formulas:
-            try:
-                composition = Composition(formula)
-                elements.update(el.symbol for el in composition)
-            except Exception as e:
-                logger.error(f"Error parsing formula {formula}: {e}")
-                raise ValueError(f"Invalid chemical formula: {formula}")
-        
+            composition = parse_formula(formula)
+            elements.update(el.symbol for el in composition)
+
         return sorted(elements)
     
     def get_functional_mapping(self, functional: str) -> List[str]:

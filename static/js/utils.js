@@ -157,17 +157,32 @@ function isValidApiKey(key) {
 }
 
 // Validation utilities
+// Separators accepted between formulas: , (ASCII), U+FF0C, U+3001, ; and U+FF1B.
+// Whitespace is NOT a separator; it is rejected inside a formula (see below).
+const FORMULA_SEPARATORS = /[,，、;；]/;
+
+/**
+ * Split and validate the formula input. Mirrors app/services/formula_parser.py.
+ * @param {string} formulasText - Raw text from the formula input.
+ * @returns {string[]} The trimmed formulas.
+ * @throws {Error} If there are too few or too many formulas, or one contains a space.
+ */
 function validateFormulas(formulasText) {
-  const formulas = formulasText.split(',').map(f => f.trim()).filter(f => f);
-  
+  const formulas = formulasText.split(FORMULA_SEPARATORS).map(f => f.trim()).filter(f => f);
+
   if (formulas.length < 2) {
     throw new Error('At least 2 chemical formulas are required');
   }
-  
+
   if (formulas.length > 4) {
     throw new Error('Maximum 4 formulas allowed');
   }
-  
+
+  const withSpace = formulas.find(f => /\s/.test(f));
+  if (withSpace) {
+    throw new Error(`'${withSpace}' contains a space. Separate formulas with commas.`);
+  }
+
   return formulas;
 }
 

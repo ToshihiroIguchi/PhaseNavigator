@@ -2,6 +2,7 @@ from typing import List
 from pydantic import BaseModel, Field, field_validator
 
 from ..core.config import settings
+from ..services.formula_parser import parse_formula, split_formulas
 
 
 class DiagramRequest(BaseModel):
@@ -56,6 +57,9 @@ class DiagramRequest(BaseModel):
             raise ValueError(f"At least {settings.min_formulas} chemical formulas are required")
         if len(cleaned) > settings.max_formulas:
             raise ValueError(f"Maximum {settings.max_formulas} formulas allowed")
+        # Reject spaces inside a formula, unparsable text, and unknown elements
+        for formula in cleaned:
+            parse_formula(formula)
         return cleaned
 
 
@@ -76,7 +80,7 @@ class FormDiagramRequest(BaseModel):
             temp_int = 0
         
         # Parse formulas
-        formula_list = [f.strip() for f in self.formulas.split(",") if f.strip()]
+        formula_list = split_formulas(self.formulas)
         
         return DiagramRequest(
             f=formula_list,

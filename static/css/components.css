@@ -485,11 +485,10 @@ input:checked + .slider:before {
   text-decoration: underline;
 }
 
-small.warn {
-  background: none;
-  border: none;
-  padding: 0;
-  color: #666666;
+.hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--gray-500);
   font-size: 0.75rem;
 }
 
