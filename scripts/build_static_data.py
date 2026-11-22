@@ -139,6 +139,10 @@ def subsystem_chemsys(elements: Sequence[str]) -> List[str]:
     ]
 
 
+# Largest number of elements in one Materials Project material (the query ranges up to this).
+MAX_ELEMENTS_IN_MATERIAL = 9
+
+
 def redistributable_ids(client: Any, chemsys: Optional[List[str]]) -> Set[str]:
     """
     Collect the IDs of materials that may be redistributed.
@@ -150,14 +154,19 @@ def redistributable_ids(client: Any, chemsys: Optional[List[str]]) -> Set[str]:
     Returns:
         Material IDs with a known CC BY license.
     """
-    kwargs: Dict[str, Any] = {"fields": ["material_id", "builder_meta"]}
+    queries: List[Dict[str, Any]]
     if chemsys:
-        kwargs["chemsys"] = chemsys
+        queries = [{"chemsys": chemsys}]
+    else:
+        # One request for the whole database fails in the client's bulk transfer, so split by the
+        # number of elements. A failing request raises: a partial list would silently drop materials.
+        queries = [{"num_elements": (n, n)} for n in range(1, MAX_ELEMENTS_IN_MATERIAL + 1)]
     allowed: Set[str] = set()
-    for doc in client.materials.search(**kwargs):
-        meta = getattr(doc, "builder_meta", None)
-        if is_redistributable(getattr(meta, "license", None), getattr(meta, "batch_id", None)):
-            allowed.add(str(doc.material_id))
+    for query in queries:
+        for doc in client.materials.search(fields=["material_id", "builder_meta"], **query):
+            meta = getattr(doc, "builder_meta", None)
+            if is_redistributable(getattr(meta, "license", None), getattr(meta, "batch_id", None)):
+                allowed.add(str(doc.material_id))
     return allowed
 
 
@@ -201,6 +210,7 @@ def build_dataset(
     limit: Optional[int] = None,
     log: Any = print,
     scope: Any = "all",
+    allowed: Optional[Set[str]] = None,
 ) -> Dict[str, Any]:
     """
     Download and convert the entries of one thermo type.
@@ -212,12 +222,15 @@ def build_dataset(
         limit: Stop after this many materials (for smoke tests).
         log: Function used for progress messages.
         scope: ``"all"`` or the list of elements the download covers.
+        allowed: Redistributable IDs from ``redistributable_ids``; looked up when omitted
+            (pass it to share one lookup between several thermo types).
 
     Returns:
         The dataset payload ready to be written as JSON.
     """
     thermo_type = DATASETS[functional]["thermo_type"]
-    allowed = redistributable_ids(client, chemsys)
+    if allowed is None:
+        allowed = redistributable_ids(client, chemsys)
     candidates = thermo_ids(client, thermo_type, chemsys)
     kept = [mid for mid in candidates if mid in allowed]
     excluded = len(candidates) - len(kept)
@@ -358,8 +371,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             manifest["database_version"] = client.get_database_version()
         except Exception:  # noqa: BLE001 - the version is informational only
             manifest["database_version"] = None
+        allowed = redistributable_ids(client, chemsys)
+        print(f"{len(allowed)} materials carry a redistributable license")
         for functional in functionals:
-            payload = build_dataset(client, functional, chemsys, args.limit, scope=scope)
+            payload = build_dataset(client, functional, chemsys, args.limit, scope=scope, allowed=allowed)
             payload["database_version"] = manifest["database_version"]
             info = write_gzip_json(out_dir / DATASETS[functional]["file"], payload)
             manifest["datasets"][functional] = {

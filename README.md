@@ -157,7 +157,7 @@ python -m http.server --directory static_site 8080
 
 Use the project virtual environment's Python (`venv\Scripts\python.exe` / `venv/bin/python`).
 
-- `--elements` (at most 9) downloads those elements and all their subsystems; a diagram can only use those elements. `--all` downloads everything and takes a long time (about 150,000-180,000 entries per thermo type); Materials Project also publishes bulk data on AWS Open Data.
+- `--elements` (at most 9) downloads those elements and all their subsystems; a diagram can only use those elements. `--all` downloads everything. Measured on the 2026-09-28 database: the `GGA_GGA_U` set has about 152,000 entries (4.2 MB gzipped) and took about 55 minutes to download, most of it for the license lookup and the entry fetch. The browser loads it in a few seconds and a four-element system (Li-Fe-P-O) calculates in about 4 seconds on the first run (tens of milliseconds afterwards). The other thermo types are larger (about 182,000 entries for `GGA_GGA_U_R2SCAN`) and were not downloaded in this test.
 - Materials whose license is not CC BY (for example GNoME) or cannot be determined are left out.
 - The first calculation in a browser downloads about 30 MB (Pyodide, NumPy, SciPy) from the jsDelivr CDN. The calculation runs on the page's main thread, so the page is unresponsive while it runs.
 - The data files and `static_site/` are git-ignored. The Materials Project data is CC BY 4.0: the page footer gives the credit, the license link and the statement of changes. The terms ask you to **contact the Materials Project about acknowledgements before publicly re-distributing** the data, so do that before putting such a site on the public internet (see `DEPENDENCIES.md`).

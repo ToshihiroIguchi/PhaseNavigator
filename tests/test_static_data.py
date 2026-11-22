@@ -100,6 +100,20 @@ def test_build_dataset_drops_non_commercial_and_unknown_licenses():
     assert payload["fields"] == list(RECORD_FIELDS)
 
 
+def test_license_lookup_for_everything_is_split_by_element_count():
+    """The whole database is queried per number of elements, and a failure is not swallowed."""
+    entries = make_entries()[:2]
+    client = _fake_client(entries, {"mp-1": ("BY-C", None), "mp-2": ("BY-NC", None)})
+
+    assert build.redistributable_ids(client, None) == {"mp-1"}
+    counts = [call.kwargs["num_elements"] for call in client.materials.search.call_args_list]
+    assert counts == [(n, n) for n in range(1, build.MAX_ELEMENTS_IN_MATERIAL + 1)]
+
+    client.materials.search.side_effect = RuntimeError("S3 error")
+    with pytest.raises(RuntimeError):
+        build.redistributable_ids(client, None)
+
+
 def test_written_dataset_is_reproducible_and_loadable(tmp_path):
     """The same payload gives the same bytes, and the file loads back into a Dataset."""
     entries = make_entries()
