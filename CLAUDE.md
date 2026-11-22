@@ -4,8 +4,10 @@ Guidance for Claude Code (and any AI assistant) working in this repository.
 
 ## 0. Language Policy (highest priority)
 
-- **Conversation with the user**: always Japanese. Every chat reply, question,
-  explanation, and status report addressed to the user must be written in Japanese.
+- **Conversation with the user and plans**: always Japanese. Every chat reply,
+  question, explanation, and status report addressed to the user must be written
+  in Japanese. Plans (e.g. implementation plans presented for approval in plan
+  mode) must also be written in Japanese.
 - **Everything else**: always English. Source code, identifiers, comments,
   docstrings, log messages, UI strings, test names, documentation (`README.md`,
   `DEPENDENCIES.md`, this file), commit messages, branch names, and pull request
