@@ -18,7 +18,7 @@ from .hull import CompoundHull, Point
 
 STABLE_COLOR = "#2e8b57"
 LINE_COLOR = "#000000"
-COLORSCALE = [[0.0, "#fff5e3"], [0.5, "#f2a65a"], [1.0, "#b8312f"]]
+COLORSCALE = [[0.0, "#f6c98a"], [0.5, "#f2a65a"], [1.0, "#b8312f"]]
 COLORBAR_TITLE = "Energy Above Hull<br>(eV/atom)"
 
 # Corners of a regular tetrahedron with unit edges.
@@ -150,6 +150,7 @@ def _marker_group(
             "cmax": max(cutoff, 1e-6),
             "size": 7 * scale,
             "symbol": "diamond",
+            "line": {"color": "#666666", "width": 0.5},
             "colorbar": {"title": {"text": COLORBAR_TITLE}, "thickness": 14, "len": 0.6},
         }
     return {
@@ -240,48 +241,163 @@ def _binary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
     return {"data": data, "layout": layout}
 
 
-def _ternary_label_position(point: Point) -> str:
-    """
-    Choose where to put a phase label so it stays inside the triangle.
+# Estimated size of a ternary diagram in pixels, used to judge how much room a label needs.
+_TERNARY_SIDE_PX = 600.0
+_LABEL_FONT_PX = 13.0
+_LABEL_POSITIONS = (
+    "middle right", "middle left", "top center", "bottom center",
+    "top right", "top left", "bottom right", "bottom left",
+)
 
-    Labels centred on a point of the left or right edge would be cut off by the plot
-    area, so they are placed towards the inside. In Plotly's ternary layout the first
-    terminal is the top corner, the second the bottom-left and the third the bottom-right.
+
+def _ternary_xy(fractions: Sequence[float]) -> Tuple[float, float]:
+    """
+    Convert ternary fractions to Cartesian coordinates of the triangle.
+
+    In Plotly's layout the first terminal is the top corner, the second the bottom-left
+    and the third the bottom-right; the side length is 1.
 
     Args:
-        point: A stable phase.
+        fractions: Fractions of the first three terminals.
 
     Returns:
-        A Plotly ``textposition`` value.
+        The ``(x, y)`` position.
     """
-    top, left, right = (float(v) for v in point.fractions[:3])
-    if left + right < 1e-8:
-        return "top center"
-    horizontal = right + top / 2  # 0 at the left edge, 1 at the right edge
-    if right < 1e-3 or horizontal < 0.5 and top > 0.02:
-        return "middle right"
-    if left < 1e-3 or horizontal >= 0.5 and top > 0.02:
-        return "middle left"
-    return "top center"
+    top, _left, right = (float(v) for v in fractions[:3])
+    return right + top / 2, top * math.sqrt(3) / 2
 
 
-def _padded_label(point: Point) -> str:
+def _label_box(
+    x: float, y: float, position: str, width: float, height: float, gap: float
+) -> Tuple[float, float, float, float]:
     """
-    Format a phase label with room for the marker on the side it is attached to.
+    Estimate the box a label occupies for one Plotly ``textposition``.
 
     Args:
-        point: A stable phase.
+        x: Marker x position.
+        y: Marker y position.
+        position: A value of ``_LABEL_POSITIONS``.
+        width: Label width in triangle units.
+        height: Label height in triangle units.
+        gap: Distance kept between the marker and the label.
 
     Returns:
-        HTML label with non-breaking spaces next to the marker.
+        ``(x0, y0, x1, y1)`` of the box.
     """
-    label = htmlify(point.entry.formula)
-    position = _ternary_label_position(point)
-    if position == "middle right":
-        return "   " + label
-    if position == "middle left":
-        return label + "   "
-    return label
+    vertical, horizontal = position.split()
+    if horizontal == "right":
+        x0 = x + gap
+    elif horizontal == "left":
+        x0 = x - gap - width
+    else:
+        x0 = x - width / 2
+    if vertical == "top":
+        y0 = y + gap
+    elif vertical == "bottom":
+        y0 = y - gap - height
+    else:
+        y0 = y - height / 2
+    return x0, y0, x0 + width, y0 + height
+
+
+def _label_penalty(
+    box: Tuple[float, float, float, float],
+    placed: Sequence[Tuple[float, float, float, float]],
+    markers: Sequence[Tuple[float, float]],
+    segments: Sequence[Tuple[Tuple[float, float], Tuple[float, float]]],
+    marker_radius: float,
+) -> float:
+    """
+    Score a label box; the lower the score, the less it collides with.
+
+    Args:
+        box: Candidate label box.
+        placed: Boxes of the labels that are already placed.
+        markers: Positions of the other markers.
+        segments: Tie lines as pairs of end points.
+        marker_radius: Radius of a marker in triangle units.
+
+    Returns:
+        A non-negative penalty.
+    """
+    x0, y0, x1, y1 = box
+    penalty = 0.0
+    for a0, b0, a1, b1 in placed:
+        overlap_x = min(x1, a1) - max(x0, a0)
+        overlap_y = min(y1, b1) - max(y0, b0)
+        if overlap_x > 0 and overlap_y > 0:
+            penalty += 100.0 + 1e5 * overlap_x * overlap_y
+    for mx, my in markers:
+        if x0 - marker_radius < mx < x1 + marker_radius and y0 - marker_radius < my < y1 + marker_radius:
+            penalty += 60.0
+    for (sx, sy), (ex, ey) in segments:
+        hits = 0
+        for k in range(25):
+            t = k / 24
+            px, py = sx + (ex - sx) * t, sy + (ey - sy) * t
+            if x0 <= px <= x1 and y0 <= py <= y1:
+                hits += 1
+        if hits:
+            penalty += 10.0 + hits
+    tolerance = 0.003
+    for cx, cy in ((x0, y0), (x1, y0), (x0, y1), (x1, y1)):
+        outside = (
+            cy < -tolerance
+            or math.sqrt(3) * cx - cy < -tolerance * 2
+            or math.sqrt(3) * (1 - cx) - cy < -tolerance * 2
+        )
+        if outside:
+            penalty += 30.0
+    return penalty
+
+
+def _place_ternary_labels(
+    points: Sequence[Point], edges: Sequence[Tuple[Point, Point]]
+) -> List[Tuple[str, str]]:
+    """
+    Choose a position for every phase label so that labels avoid each other.
+
+    The labels are placed one after another, the most crowded phases first. Each label
+    takes the Plotly ``textposition`` whose estimated box overlaps the fewest other
+    labels, markers and tie lines and stays inside the triangle.
+
+    Args:
+        points: The stable phases to label.
+        edges: Tie lines of the hull.
+
+    Returns:
+        One ``(textposition, text)`` pair per phase, in the order of ``points``.
+    """
+    scale = 1.0 / _TERNARY_SIDE_PX
+    height = _LABEL_FONT_PX * 1.3 * scale
+    gap = 0.012
+    xy = [_ternary_xy(p.fractions) for p in points]
+    segments = [(_ternary_xy(a.fractions), _ternary_xy(b.fractions)) for a, b in edges]
+    degree = [sum(1 for a, b in edges if a is p or b is p) for p in points]
+    result: List[Tuple[str, str]] = [("top center", "")] * len(points)
+    placed: List[Tuple[float, float, float, float]] = []
+    for index in sorted(range(len(points)), key=lambda i: -degree[i]):
+        formula = points[index].entry.formula
+        # Subscript digits are narrower than letters.
+        chars = sum(0.7 if c.isdigit() or c == "." else 1.0 for c in formula)
+        width = chars * _LABEL_FONT_PX * 0.6 * scale
+        x, y = xy[index]
+        others = [m for i, m in enumerate(xy) if i != index]
+        best = min(
+            _LABEL_POSITIONS,
+            key=lambda pos: _label_penalty(
+                _label_box(x, y, pos, width, height, gap), placed, others, segments, 6.0 * scale
+            ),
+        )
+        placed.append(_label_box(x, y, best, width, height, gap))
+        label = htmlify(formula)
+        horizontal = best.split()[1]
+        if horizontal == "right":
+            label = "\u00a0\u00a0" + label
+        elif horizontal == "left":
+            label = label + "\u00a0\u00a0"
+        result[index] = (best, label)
+    return result
 
 
 def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
@@ -304,6 +420,7 @@ def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
         line_b += [float(first.fractions[1]), float(second.fractions[1]), None]
         line_c += [float(first.fractions[2]), float(second.fractions[2]), None]
     inner = [p for p in stable if p.fractions.max() < 1 - 1e-8]
+    placements = _place_ternary_labels(inner, _edges(hull))
     data: List[Dict[str, Any]] = [
         {"type": "scatterternary", "mode": "lines", "a": line_a, "b": line_b, "c": line_c,
          "line": {"color": LINE_COLOR, "width": 1.5}, "hoverinfo": "none", "showlegend": False},
@@ -312,19 +429,22 @@ def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
         {"type": "scatterternary", "mode": "markers", **abc(unstable),
          **_marker_group("Above Hull", unstable, above, hull, cutoff, False)},
         {"type": "scatterternary", "mode": "text", "name": "Labels (stable)", **abc(inner),
-         "text": [_padded_label(p) for p in inner],
-         "textposition": [_ternary_label_position(p) for p in inner],
-         "textfont": {"size": 11}, "hoverinfo": "skip", "showlegend": False},
+         "text": [t for _, t in placements],
+         "textposition": [pos for pos, _ in placements],
+         "textfont": {"size": 13, "color": "#1f2937", "shadow": "0 0 3px #fff, 0 0 3px #fff"},
+         "hoverinfo": "skip", "showlegend": False},
     ]
     labels = _terminal_labels(hull)
-    axis = {"min": 0, "showgrid": True, "tickfont": {"size": 9}, "layer": "below traces"}
+    axis = {"min": 0, "showgrid": True, "tickvals": [0.2, 0.4, 0.6, 0.8],
+            "tickfont": {"size": 11, "color": "#555555"}, "gridcolor": "rgba(0,0,0,0.18)",
+            "layer": "below traces"}
     layout = _base_layout()
-    layout["margin"] = {"b": 40, "l": 40, "r": 40, "t": 50}
+    layout["margin"] = {"b": 80, "l": 60, "r": 60, "t": 70}
     layout["ternary"] = {
         "sum": 1,
-        "aaxis": {**axis, "title": {"text": labels[0], "font": {"size": 20}}},
-        "baxis": {**axis, "title": {"text": labels[1], "font": {"size": 20}}},
-        "caxis": {**axis, "title": {"text": labels[2], "font": {"size": 20}}},
+        "aaxis": {**axis, "title": {"text": labels[0], "font": {"size": 18, "color": "#111827"}}},
+        "baxis": {**axis, "title": {"text": labels[1], "font": {"size": 18, "color": "#111827"}}},
+        "caxis": {**axis, "title": {"text": labels[2], "font": {"size": 18, "color": "#111827"}}},
     }
     return {"data": data, "layout": layout}
 

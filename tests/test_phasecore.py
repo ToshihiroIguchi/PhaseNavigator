@@ -216,3 +216,48 @@ def test_invalid_requests_give_clear_errors(dataset, formulas, temperature, cuto
     """Out-of-range or unsupported requests fail with a user-facing message."""
     with pytest.raises(ValueError, match=message):
         generate_diagram(dataset, formulas, temperature, cutoff, functional)
+
+
+def test_ternary_figure_has_readable_axes_and_valid_label_positions(dataset):
+    """Corner ticks are dropped and every label gets a known position and a legible font."""
+    from phasecore.plotting import _LABEL_POSITIONS
+
+    plot = generate_diagram(dataset, ["Fe", "Al", "O"], 0, 0.5, "GGA_GGA_U")["plot"]
+    ternary = plot["layout"]["ternary"]
+    for axis in ("aaxis", "baxis", "caxis"):
+        assert 0 not in ternary[axis]["tickvals"] and 1 not in ternary[axis]["tickvals"]
+        assert ternary[axis]["tickfont"]["size"] >= 11
+    labels = next(t for t in plot["data"] if t.get("mode") == "text")
+    assert labels["textfont"]["size"] >= 13
+    assert len(labels["text"]) == len(labels["textposition"])
+    assert set(labels["textposition"]) <= set(_LABEL_POSITIONS)
+
+
+def test_ternary_labels_of_neighbouring_phases_do_not_overlap():
+    """Phases that sit close together are labelled on different sides."""
+    from types import SimpleNamespace
+
+    from phasecore.plotting import _label_box, _place_ternary_labels, _ternary_xy
+
+    def phase(formula, fractions):
+        return SimpleNamespace(entry=SimpleNamespace(formula=formula), fractions=fractions)
+
+    points = [
+        phase("Ba2TiO4", (0.57, 0.29, 0.14)),
+        phase("BaTiO3", (0.40, 0.40, 0.20)),
+        phase("Ba6Y2Ti4O17", (0.52, 0.18, 0.30)),
+        phase("BaTi2O5", (0.25, 0.60, 0.15)),
+    ]
+    placements = _place_ternary_labels(points, [])
+    assert len(placements) == len(points)
+
+    width_of = {p.entry.formula: len(p.entry.formula) * 13 * 0.6 / 600 for p in points}
+    boxes = []
+    for point, (position, _text) in zip(points, placements):
+        x, y = _ternary_xy(point.fractions)
+        boxes.append(_label_box(x, y, position, width_of[point.entry.formula], 13 * 1.3 / 600, 0.012))
+    for i, first in enumerate(boxes):
+        for second in boxes[i + 1:]:
+            overlap_x = min(first[2], second[2]) - max(first[0], second[0])
+            overlap_y = min(first[3], second[3]) - max(first[1], second[1])
+            assert not (overlap_x > 0 and overlap_y > 0)
