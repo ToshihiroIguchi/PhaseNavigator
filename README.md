@@ -127,12 +127,12 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 ## 📋 Usage
 
 1. **Get Materials Project API Key**: Sign up and get your free API key at [next-gen.materialsproject.org/api](https://next-gen.materialsproject.org/api)
-2. **Enter Chemical Formulas**: Input 2-4 chemical formulas (e.g., `BaO, MgO, SiO2`)
+2. **Enter Chemical Formulas**: Input 2-4 chemical formulas separated by commas (e.g., `BaO, MgO, SiO2`). Full-width commas (`，`), ideographic commas (`、`) and semicolons (`;`, `；`) are also accepted. Spaces are **not** separators and are rejected inside a formula, because `Fe2O3 Al2O3` would otherwise be read as one compound.
 3. **Save API Key**: Enter your API key once - it will be encrypted using AES-GCM and stored securely in your browser with non-extractable keys in IndexedDB
 4. **Set Parameters**: 
    - Choose temperature (0 K for ground state, or 300-2000 K for finite temperature)
    - Adjust energy cutoff for unstable phases (default: 0.2 eV/atom)
-5. **Generate Diagram**: Click "Generate Phase Diagram" and watch the progress
+5. **Generate Diagram**: Click "Generate Phase Diagram" and wait for the elapsed-time indicator to finish (quaternary systems can take up to about a minute)
 6. **Explore Results**: Interactive phase diagram with temperature and energy cutoff displayed
 
 ### Example Input Combinations
@@ -146,7 +146,7 @@ a Fortran toolchain and frequently fail to build on Windows, so they are opt-in:
 
 ### Architecture
 - **Backend**: FastAPI with async support
-- **Frontend**: Vanilla JavaScript with Plotly.js
+- **Frontend**: Vanilla JavaScript with Plotly.js (the bundle shipped with the installed `plotly` Python package is served locally from `/vendor/plotly.min.js`, so the browser and server always use matching versions)
 - **Data Source**: Materials Project API
 - **Computation**: pymatgen for phase diagram calculations
 
