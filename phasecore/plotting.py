@@ -434,12 +434,17 @@ def _ternary(hull: CompoundHull, cutoff: float) -> Dict[str, Any]:
          "textfont": {"size": 13, "color": "#1f2937", "shadow": "0 0 3px #fff, 0 0 3px #fff"},
          "hoverinfo": "skip", "showlegend": False},
     ]
+    # A horizontal colour bar on the legend row leaves the full width to the triangle.
+    data[2]["marker"]["colorbar"] = {
+        "orientation": "h", "x": 1, "xanchor": "right", "y": 1.08, "yanchor": "bottom",
+        "len": 0.35, "thickness": 10, "title": {"text": "Energy above hull (eV/atom)", "side": "top"},
+    }
     labels = _terminal_labels(hull)
     axis = {"min": 0, "showgrid": True, "tickvals": [0.2, 0.4, 0.6, 0.8],
             "tickfont": {"size": 11, "color": "#555555"}, "gridcolor": "rgba(0,0,0,0.18)",
             "layer": "below traces"}
     layout = _base_layout()
-    layout["margin"] = {"b": 80, "l": 60, "r": 60, "t": 70}
+    layout["margin"] = {"b": 80, "l": 60, "r": 40, "t": 90}
     layout["ternary"] = {
         "sum": 1,
         "aaxis": {**axis, "title": {"text": labels[0], "font": {"size": 18, "color": "#111827"}}},

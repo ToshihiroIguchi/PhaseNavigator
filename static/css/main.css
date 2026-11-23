@@ -118,6 +118,16 @@ select:focus-visible {
   outline-offset: 1px;
 }
 
+/* Keep the controls in view while the phase table is scrolled (wide screens only) */
+@media (min-width: 769px) {
+  #controls {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   body {
