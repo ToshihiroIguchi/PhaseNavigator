@@ -18,7 +18,7 @@
 
     <div id="empty-state" class="empty-state">
       <h2>No diagram yet</h2>
-      <p>Enter 2–4 formulas and your Materials Project API key, then choose
+      <p>Enter 2–4 formulas{% if not static_edition %} and your Materials Project API key{% endif %}, then choose
          <strong>Generate Phase Diagram</strong>.</p>
     </div>
 
@@ -48,17 +48,7 @@
     Free energies at finite temperature use the descriptor of
     <a href="https://doi.org/10.1038/s41467-018-06682-4" target="_blank" rel="noopener noreferrer">Bartel et al., Nature Communications 9, 4168 (2018)</a>.
   </p>
-  {% if static_edition %}
-  <p>
-    GNoME-derived data (Merchant et al., Nature, 2023) is licensed under CC BY-NC 4.0 for non-commercial use only
-    and is not included in this edition.
-  </p>
-  {% elif not allow_non_commercial %}
-  <p>
-    GNoME-derived data (Merchant et al., Nature, 2023) is licensed under CC BY-NC 4.0 for non-commercial use only
-    and is disabled on this server.
-  </p>
-  {% else %}
+  {% if allow_non_commercial and not static_edition %}
   <p>
     GNoME-derived data (Merchant et al., Nature, 2023) is licensed under CC BY-NC 4.0 and is for non-commercial use only.
     It is excluded by default and is used only when you enable &ldquo;Include non-commercial data&rdquo;.
