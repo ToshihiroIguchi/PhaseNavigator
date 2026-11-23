@@ -28,7 +28,8 @@ def test_page_has_no_api_key_or_non_commercial_controls(built):
     assert 'data-edition="static"' in html
     assert 'id="api-key"' not in html
     assert 'id="include-non-commercial"' not in html
-    assert "not included" in html  # footer states GNoME data is left out
+    assert "GNoME" not in html  # unavailable here, so it is not mentioned at all
+    assert "API key" not in html and "API Key" not in html
     assert "Bartel et al." in html
 
 
