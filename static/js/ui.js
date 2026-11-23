@@ -32,7 +32,7 @@ class UIManager {
       
       // Temperature controls
       tempToggle: document.getElementById('temp-toggle'),
-      tempUnitToggle: document.getElementById('temp-unit-toggle'),
+      tempUnitButtons: Array.from(document.querySelectorAll('#temp-unit-group button[data-unit]')),
       tempControls: document.getElementById('temp-controls'),
       tempInput: document.getElementById('temp-input'),
       tempSlider: document.getElementById('temp-slider'),
@@ -72,7 +72,9 @@ class UIManager {
     
     // Temperature controls
     this.elements.tempToggle.addEventListener('change', () => this.updateTemperatureControls());
-    this.elements.tempUnitToggle.addEventListener('change', () => this.toggleTemperatureUnit());
+    this.elements.tempUnitButtons.forEach((button) => {
+      button.addEventListener('click', () => this.setTemperatureUnit(button.dataset.unit));
+    });
     this.elements.tempSlider.addEventListener('input', () => this.syncTemperatureValues());
     this.elements.tempInput.addEventListener('input', () => this.validateTemperatureInput());
     this.elements.tempInput.addEventListener('blur', () => this.validateTemperatureInput());
@@ -93,7 +95,7 @@ class UIManager {
   initializeTemperatureControls() {
     this.elements.tempControls.style.display = 'none';
     this.elements.finalTempInput.value = '0';
-    this.elements.tempUnitToggle.checked = false; // Default is Kelvin
+    this.tempUnit = 'K'; // Default is Kelvin
     this.elements.tempSlider.value = '300';
     this.elements.tempInput.value = '300';
     this.updateTemperatureDisplay(true); // Kelvin display
@@ -177,15 +179,29 @@ class UIManager {
       this.elements.finalTempInput.value = '300';
     }
     
-    // Update unit labels when controls are shown
+    // Update unit buttons when controls are shown
     if (isChecked) {
-      const isKelvin = !this.elements.tempUnitToggle.checked;
-      this.updateUnitLabels(isKelvin);
+      this.updateUnitLabels(this.isKelvin());
     }
   }
 
-  toggleTemperatureUnit() {
-    const isKelvin = !this.elements.tempUnitToggle.checked;
+  /**
+   * Whether the temperature input is currently in kelvin.
+   * @returns {boolean} True for kelvin, false for degrees Celsius.
+   */
+  isKelvin() {
+    return this.tempUnit !== 'C';
+  }
+
+  /**
+   * Switch the temperature input between kelvin and degrees Celsius.
+   * Does nothing when the requested unit is already active.
+   * @param {string} unit - 'K' or 'C'.
+   */
+  setTemperatureUnit(unit) {
+    if (unit === this.tempUnit) return;
+    this.tempUnit = unit === 'C' ? 'C' : 'K';
+    const isKelvin = this.isKelvin();
     this.updateTemperatureInputs(isKelvin);
     this.updateTemperatureDisplay(isKelvin);
     this.updateTemperatureConversion();
@@ -236,23 +252,19 @@ class UIManager {
     });
   }
 
+  /**
+   * Reflect the active unit on the K / °C buttons.
+   * @param {boolean} isKelvin - True when kelvin is the active unit.
+   */
   updateUnitLabels(isKelvin) {
-    const kelvinLabel = document.querySelector('.unit-label.kelvin');
-    const celsiusLabel = document.querySelector('.unit-label.celsius');
-    
-    if (kelvinLabel && celsiusLabel) {
-      if (isKelvin) {
-        kelvinLabel.classList.add('active');
-        celsiusLabel.classList.remove('active');
-      } else {
-        celsiusLabel.classList.add('active');
-        kelvinLabel.classList.remove('active');
-      }
-    }
+    this.elements.tempUnitButtons.forEach((button) => {
+      const active = (button.dataset.unit === 'K') === isKelvin;
+      button.setAttribute('aria-pressed', String(active));
+    });
   }
 
   updateTemperatureConversion() {
-    const isKelvin = !this.elements.tempUnitToggle.checked;
+    const isKelvin = this.isKelvin();
     const currentValue = parseInt(this.elements.tempInput.value, 10) || 300;
     
     let conversionText;
@@ -268,7 +280,7 @@ class UIManager {
   }
 
   getKelvinValue() {
-    const isKelvin = !this.elements.tempUnitToggle.checked;
+    const isKelvin = this.isKelvin();
     const currentValue = parseInt(this.elements.tempInput.value, 10) || 300;
     return isKelvin ? currentValue : Math.round(celsiusToKelvin(currentValue));
   }
@@ -283,7 +295,7 @@ class UIManager {
   }
 
   validateTemperatureInput() {
-    const isKelvin = !this.elements.tempUnitToggle.checked;
+    const isKelvin = this.isKelvin();
     let value = this.elements.tempInput.value;
     
     if (value === '') {

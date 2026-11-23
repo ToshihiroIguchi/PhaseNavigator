@@ -62,13 +62,9 @@
 
   <div class="temperature-controls-compact" id="temp-controls">
     <div class="temp-control-row">
-      <div class="temp-unit-toggle">
-        <span class="unit-label kelvin" aria-hidden="true">K</span>
-        <span class="toggle-switch">
-          <input type="checkbox" id="temp-unit-toggle"
-                 aria-label="Use degrees Celsius instead of kelvin">
-        </span>
-        <span class="unit-label celsius" aria-hidden="true">°C</span>
+      <div class="segmented" id="temp-unit-group" role="group" aria-label="Temperature unit">
+        <button type="button" data-unit="K" aria-pressed="true">K</button>
+        <button type="button" data-unit="C" aria-pressed="false">°C</button>
       </div>
       <div class="temp-input-group">
         <input type="number" id="temp-input" min="300" max="2000" step="10" value="300"
@@ -86,17 +82,20 @@
   <!-- Advanced Settings -->
   <div class="form-row">
     <div class="form-group-half">
-      <label for="e-cut">Energy Cutoff (eV/atom)</label>
-      <input
-        type="number"
-        id="e-cut"
-        name="e_cut"
-        step="0.1"
-        min="0"
-        max="2"
-        value="{{ e_cut or 0.2 }}"
-        aria-describedby="e-cut-hint"
-      />
+      <label for="e-cut">Energy cutoff</label>
+      <div class="input-suffix">
+        <input
+          type="number"
+          id="e-cut"
+          name="e_cut"
+          step="0.1"
+          min="0"
+          max="2"
+          value="{{ e_cut or 0.2 }}"
+          aria-describedby="e-cut-hint"
+        />
+        <span class="suffix" aria-hidden="true">eV/atom</span>
+      </div>
     </div>
     <div class="form-group-half">
       <label for="functional">DFT Functional</label>
@@ -113,7 +112,7 @@
       </select>
     </div>
   </div>
-  <small class="hint" id="e-cut-hint">The energy cutoff also plots unstable phases up to this energy above the hull. The table lists stable phases only.</small>
+  <small class="hint" id="e-cut-hint">Also plots unstable phases up to this energy above the hull (eV/atom); the table lists stable phases only.</small>
 
   {% if static_edition or not allow_non_commercial %}
   <small class="hint" id="non-commercial-hint">Only CC BY 4.0 data is used.</small>

@@ -33,6 +33,14 @@ def test_page_has_no_api_key_or_non_commercial_controls(built):
     assert "Bartel et al." in html
 
 
+def test_temperature_unit_is_a_button_group(built):
+    """The K / °C switch is a pair of buttons, not a checkbox."""
+    html = (built[0] / "index.html").read_text(encoding="utf-8")
+
+    assert 'data-unit="K"' in html and 'data-unit="C"' in html
+    assert 'id="temp-unit-toggle"' not in html
+
+
 def test_page_uses_relative_assets_and_a_pinned_pyodide(built):
     """Assets are relative; Pyodide is pinned and loaded (with its hash) by the worker, not the page."""
     html = (built[0] / "index.html").read_text(encoding="utf-8")

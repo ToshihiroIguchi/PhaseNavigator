@@ -233,6 +233,16 @@ def test_ternary_figure_has_readable_axes_and_valid_label_positions(dataset):
     assert set(labels["textposition"]) <= set(_LABEL_POSITIONS)
 
 
+def test_ternary_colorbar_is_horizontal_on_the_legend_row(dataset):
+    """The ternary colour bar sits above the triangle so the triangle keeps the full width."""
+    plot = generate_diagram(dataset, ["Fe", "Al", "O"], 0, 0.5, "GGA_GGA_U")["plot"]
+    group = next(t for t in plot["data"] if t.get("name") == "Above Hull")
+
+    colorbar = group["marker"]["colorbar"]
+    assert colorbar["orientation"] == "h"
+    assert colorbar["y"] > 1
+
+
 def test_ternary_labels_of_neighbouring_phases_do_not_overlap():
     """Phases that sit close together are labelled on different sides."""
     from types import SimpleNamespace
